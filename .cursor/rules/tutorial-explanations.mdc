@@ -7,6 +7,10 @@ alwaysApply: true
 
 This is a tutorial app. I'm learning. Explain things like you're talking to a beginner.
 
+## Project purpose
+
+This repo compares **Leaflet** and **MapLibre** on performance, maintainability, and code ergonomics. When suggesting changes, keep both sides comparable where it makes sense.
+
 ## How to respond
 
 - **Keep it short.** Long walls of text make me skip reading.

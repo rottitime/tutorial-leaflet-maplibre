@@ -1,4 +1,4 @@
-This is a experiemnt between Leaflet and MapLibre to understand the performance, maintanabilioty ease of code on both.
+This is an experiment between Leaflet and MapLibre to understand the performance, maintainability, and ease of code on both.
 
 # Setup
 
