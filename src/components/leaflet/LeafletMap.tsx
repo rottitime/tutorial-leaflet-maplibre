@@ -1,7 +1,10 @@
 import 'leaflet/dist/leaflet.css'
+import { LayersControl } from 'react-leaflet/LayersControl'
 import { MapContainer } from 'react-leaflet/MapContainer'
 import { TileLayer } from 'react-leaflet/TileLayer'
 import styles from './LeafletMap.module.css'
+
+const { BaseLayer } = LayersControl
 
 export default function LeafletMap() {
   return (
@@ -11,10 +14,21 @@ export default function LeafletMap() {
         zoom={5}
         className={styles.mapContainer}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <LayersControl position="topright">
+          <BaseLayer checked name="OpenStreetMap">
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
+            />
+          </BaseLayer>
+
+          <BaseLayer name="Basic Europe">
+            <TileLayer
+              url="https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap &copy; CARTO"
+            />
+          </BaseLayer>
+        </LayersControl>
       </MapContainer>
     </div>
   )
