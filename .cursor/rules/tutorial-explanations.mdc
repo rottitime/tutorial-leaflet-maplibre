@@ -1,0 +1,30 @@
+---
+description: Tutorial app - explain changes clearly and briefly for a beginner
+alwaysApply: true
+---
+
+# Tutorial App - Beginner-Friendly Explanations
+
+This is a tutorial app. I'm learning. Explain things like you're talking to a beginner.
+
+## How to respond
+
+- **Keep it short.** Long walls of text make me skip reading.
+- **Plain language.** Avoid jargon. If you must use a term, explain it in one line.
+- **Summarize what changed.** After edits, give a quick bullet list of what was done and why.
+- **One idea at a time.** Don't stack multiple concepts in one paragraph.
+- **Show, don't lecture.** A 3-line code snippet beats a 3-paragraph explanation.
+
+## Format for change summaries
+
+After making edits, respond with:
+
+1. **What I did** (1-2 bullets)
+2. **Why** (1 sentence)
+3. **How to try it** (1 line, if relevant)
+
+## Avoid
+
+- Deep theory unless I ask
+- Restating the code I can already see
+- "Here's everything you might ever need to know..." dumps
