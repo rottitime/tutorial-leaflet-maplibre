@@ -1,14 +1,15 @@
 'use client'
 
-import './leafletDefaultIcon'
 import 'leaflet/dist/leaflet.css'
 import { LayersControl } from 'react-leaflet/LayersControl'
 import { MapContainer } from 'react-leaflet/MapContainer'
 import { TileLayer } from 'react-leaflet/TileLayer'
+import Debug from './Debug'
 import { FerryRouteOverlay } from './FerryRouteOverlay'
 import { GaragePerfGeoJsonOverlay } from './GaragePerfGeoJsonOverlay'
-import { UkWeatherPatchesOverlay } from './UkWeatherPatchesOverlay'
+import './leafletDefaultIcon'
 import styles from './LeafletMap.module.css'
+import { UkWeatherPatchesOverlay } from './UkWeatherPatchesOverlay'
 
 const { BaseLayer } = LayersControl
 
@@ -20,6 +21,8 @@ export default function LeafletMap() {
         zoom={5}
         className={styles.mapContainer}
       >
+        <Debug />
+
         <LayersControl position="topright">
           <BaseLayer checked name="OpenStreetMap">
             <TileLayer
