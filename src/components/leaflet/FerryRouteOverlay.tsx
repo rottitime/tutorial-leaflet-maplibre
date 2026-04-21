@@ -1,5 +1,6 @@
 'use client'
 
+import { parityConfig } from '@/lib/parityConfig'
 import { FerryRoute } from '@/types'
 import { CircleMarker } from 'react-leaflet/CircleMarker'
 import { LayerGroup } from 'react-leaflet/LayerGroup'
@@ -13,7 +14,7 @@ import { useAnimatedPath, useRouteAnimationProgress } from './routeAnimation'
 const { Overlay } = LayersControl
 
 export function FerryRouteOverlay() {
-  const route = useFetchJson<FerryRoute | null>('/api/test/ferries', null)
+  const route = useFetchJson<FerryRoute | null>(parityConfig.fetch.ferries, null)
   const progress = useRouteAnimationProgress()
   const animatedPath = useAnimatedPath(route?.path ?? [], progress, 14)
 

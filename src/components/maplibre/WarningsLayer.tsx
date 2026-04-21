@@ -1,0 +1,77 @@
+'use client'
+
+import { WarningPoint } from '@/types'
+import { ensureImage, ensureLayer, upsertGeoJsonSource } from './mapClientUtils'
+import { FeatureCollection, Point } from 'geojson'
+import { Map } from 'maplibre-gl'
+
+const SOURCE_ID = 'warnings-source'
+const GLOW_LAYER_ID = 'warnings-glow'
+const ICON_LAYER_ID = 'warnings-icon'
+const LABEL_LAYER_ID = 'warnings-label'
+const ICON_ID = 'warning-icon'
+
+export async function syncWarningsLayer(map: Map, warnings: WarningPoint[], visible: boolean) {
+  const data: FeatureCollection<Point> = {
+    type: 'FeatureCollection',
+    features: warnings.map((w) => ({
+      type: 'Feature',
+      properties: {
+        level: w.level,
+        radius: w.glowRadius,
+        opacity: w.glowOpacity,
+        color: w.level === 'high' ? '#ef4444' : '#f59e0b',
+      },
+      geometry: { type: 'Point', coordinates: [w.position[1], w.position[0]] },
+    })),
+  }
+
+  await ensureImage(map, ICON_ID, '/icons/barrier.png')
+  upsertGeoJsonSource(map, SOURCE_ID, data)
+
+  ensureLayer(map, {
+    id: GLOW_LAYER_ID,
+    type: 'circle',
+    source: SOURCE_ID,
+    paint: {
+      'circle-color': ['get', 'color'],
+      'circle-opacity': ['get', 'opacity'],
+      'circle-radius': ['get', 'radius'],
+      'circle-stroke-width': 0,
+    },
+  })
+
+  ensureLayer(map, {
+    id: ICON_LAYER_ID,
+    type: 'symbol',
+    source: SOURCE_ID,
+    layout: {
+      'icon-image': ICON_ID,
+      'icon-size': 0.7,
+      'icon-anchor': 'bottom',
+      'icon-allow-overlap': true,
+    },
+  })
+
+  ensureLayer(map, {
+    id: LABEL_LAYER_ID,
+    type: 'symbol',
+    source: SOURCE_ID,
+    layout: {
+      'text-field': ['get', 'level'],
+      'text-size': 11,
+      'text-offset': [0, -2.2],
+      'text-allow-overlap': true,
+    },
+    paint: {
+      'text-color': '#111827',
+      'text-halo-color': '#ffffff',
+      'text-halo-width': 1,
+    },
+  })
+
+  const visibility = visible ? 'visible' : 'none'
+  map.setLayoutProperty(GLOW_LAYER_ID, 'visibility', visibility)
+  map.setLayoutProperty(ICON_LAYER_ID, 'visibility', visibility)
+  map.setLayoutProperty(LABEL_LAYER_ID, 'visibility', visibility)
+}

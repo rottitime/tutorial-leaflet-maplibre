@@ -1,5 +1,6 @@
 'use client'
 
+import { parityConfig } from '@/lib/parityConfig'
 import { PointFeatureCollection } from '@/types'
 import L, { Icon } from 'leaflet'
 import { GeoJSON } from 'react-leaflet/GeoJSON'
@@ -16,7 +17,7 @@ const customGarageIcon = new Icon({
 })
 
 export function GaragePerfGeoJsonOverlay() {
-  const data = useFetchJson<PointFeatureCollection | null>('/api/test/garages', null)
+  const data = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.garages, null)
 
   return (
     <Overlay checked name="Garages (perf test)">

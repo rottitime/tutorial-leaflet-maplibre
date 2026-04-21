@@ -1,6 +1,7 @@
 'use client'
 
 import { Icon } from 'leaflet'
+import { parityConfig } from '@/lib/parityConfig'
 import { LatLng, PointFeature, PointFeatureCollection } from '@/types'
 import { useMemo, useState } from 'react'
 import { CircleMarker } from 'react-leaflet/CircleMarker'
@@ -26,7 +27,7 @@ type CafeToGarage = {
   garage: LatLng
 }
 
-const ZOOM_THRESHOLD = 9
+const ZOOM_THRESHOLD = parityConfig.zoom.cafesMin
 
 function toLatLng(feature: PointFeature): LatLng {
   const [lng, lat] = feature.geometry.coordinates
@@ -108,8 +109,8 @@ function AnimatedCafeRoute({
 
 export function CafeToGarageOverlay() {
   const [zoom, setZoom] = useState(0)
-  const cafes = useFetchJson<PointFeatureCollection | null>('/api/test/cafes', null)
-  const garages = useFetchJson<PointFeatureCollection | null>('/api/test/garages', null)
+  const cafes = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.cafes, null)
+  const garages = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.garages, null)
   const progress = useRouteAnimationProgress()
 
   const paired = useMemo(() => {

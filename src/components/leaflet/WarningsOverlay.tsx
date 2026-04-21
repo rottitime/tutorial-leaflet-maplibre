@@ -1,5 +1,6 @@
 'use client'
 
+import { parityConfig } from '@/lib/parityConfig'
 import { WarningPoint } from '@/types'
 import { Icon } from 'leaflet'
 import { useMemo, useState } from 'react'
@@ -11,7 +12,7 @@ import { Tooltip } from 'react-leaflet/Tooltip'
 import { useFetchJson, ZoomWatcher } from './mapClientUtils'
 
 const { Overlay } = LayersControl
-const ZOOM_THRESHOLD = 8
+const ZOOM_THRESHOLD = parityConfig.zoom.warningsMin
 
 const barrierIcon = new Icon({
   iconUrl: '/icons/barrier.png',
@@ -21,7 +22,7 @@ const barrierIcon = new Icon({
 
 export function WarningsOverlay() {
   const [zoom, setZoom] = useState(0)
-  const warnings = useFetchJson<WarningPoint[]>('/api/test/warnings', [])
+  const warnings = useFetchJson<WarningPoint[]>(parityConfig.fetch.warnings, [])
 
   const show = zoom >= ZOOM_THRESHOLD
 

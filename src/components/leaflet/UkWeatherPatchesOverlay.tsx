@@ -1,7 +1,8 @@
 'use client'
 
+import { parityConfig } from '@/lib/parityConfig'
 import { WeatherKind, WeatherPatch } from '@/types'
-import { useEffect, useState } from 'react'
+import { useFetchJson } from './mapClientUtils'
 import { CircleMarker } from 'react-leaflet/CircleMarker'
 import { LayerGroup } from 'react-leaflet/LayerGroup'
 import { LayersControl } from 'react-leaflet/LayersControl'
@@ -18,25 +19,7 @@ const STYLE: Record<
 }
 
 export function UkWeatherPatchesOverlay() {
-  const [patches, setPatches] = useState<WeatherPatch[]>([])
-
-  useEffect(() => {
-    let active = true
-
-    const load = async () => {
-      const response = await fetch('/api/test/weather')
-      const json = (await response.json()) as WeatherPatch[]
-      if (active) setPatches(json)
-    }
-
-    load().catch(() => {
-      if (active) setPatches([])
-    })
-
-    return () => {
-      active = false
-    }
-  }, [])
+  const patches = useFetchJson<WeatherPatch[]>(parityConfig.fetch.weather, [])
 
   return (
     <Overlay checked name="Demo weather (random)">
