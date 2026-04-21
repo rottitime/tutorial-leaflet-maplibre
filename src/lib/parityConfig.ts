@@ -2,6 +2,7 @@ export const parityConfig = {
   zoom: {
     warningsMin: 8,
     cafesMin: 9,
+    openBuildingsMin: 15,
   },
   fetch: {
     garages: '/api/test/garages',

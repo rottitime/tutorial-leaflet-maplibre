@@ -10,6 +10,7 @@ import { syncFerryLayer } from './FerryRouteLayer'
 import { syncGarageLayer } from './GaragePerfLayer'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
+import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
 import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
 import { useFetchJson, useMapZoom } from './mapClientUtils'
 import { useAnimatedPath, useRouteAnimationProgress } from './routeAnimation'
@@ -22,6 +23,7 @@ export default function MapLibreMap() {
   const [ready, setReady] = useState(false)
   const [activeBaseStyle, setActiveBaseStyle] = useState<BaseStyleId>('osm')
   const [terrainEnabled, setTerrainEnabled] = useState(false)
+  const [openBuildingsEnabled, setOpenBuildingsEnabled] = useState(false)
 
   const garages = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.garages, null)
   const cafes = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.cafes, null)
@@ -117,13 +119,26 @@ export default function MapLibreMap() {
     )
   }, [cafePairs, zoom, routeProgress, ready, activeBaseStyle])
 
+
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    syncOpenSourceBuildingsLayer(
+      map,
+      openBuildingsEnabled && terrainEnabled && zoom >= parityConfig.zoom.openBuildingsMin,
+    )
+  }, [openBuildingsEnabled, terrainEnabled, zoom, ready, activeBaseStyle])
+
   return (
     <div className={styles.container}>
       <MapLibreControls
         activeBaseStyle={activeBaseStyle}
         terrainEnabled={terrainEnabled}
+        openBuildingsEnabled={openBuildingsEnabled}
         onSelectBaseStyle={setActiveBaseStyle}
         onToggleTerrain={() => setTerrainEnabled((prev) => !prev)}
+        onToggleOpenBuildings={() => setOpenBuildingsEnabled((prev) => !prev)}
         className={styles.baseToggle}
         activeButtonClassName={styles.activeToggle}
       />

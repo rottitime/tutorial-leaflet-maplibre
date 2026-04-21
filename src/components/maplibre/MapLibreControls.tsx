@@ -5,8 +5,10 @@ type BaseStyleId = 'osm' | 'basicEurope'
 type Props = {
   activeBaseStyle: BaseStyleId
   terrainEnabled: boolean
+  openBuildingsEnabled: boolean
   onSelectBaseStyle: (style: BaseStyleId) => void
   onToggleTerrain: () => void
+  onToggleOpenBuildings: () => void
   className: string
   activeButtonClassName: string
 }
@@ -14,8 +16,10 @@ type Props = {
 export function MapLibreControls({
   activeBaseStyle,
   terrainEnabled,
+  openBuildingsEnabled,
   onSelectBaseStyle,
   onToggleTerrain,
+  onToggleOpenBuildings,
   className,
   activeButtonClassName,
 }: Props) {
@@ -41,6 +45,13 @@ export function MapLibreControls({
         type="button"
       >
         Terrain
+      </button>
+      <button
+        className={openBuildingsEnabled ? activeButtonClassName : ''}
+        onClick={onToggleOpenBuildings}
+        type="button"
+      >
+        Open 3D Buildings
       </button>
     </div>
   )
