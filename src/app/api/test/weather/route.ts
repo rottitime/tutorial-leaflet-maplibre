@@ -1,7 +1,7 @@
 import { WeatherKind, WeatherPatch } from '@/types'
 import { NextResponse } from 'next/server'
 
-const PATCH_COUNT = 72
+const PATCH_COUNT = 400
 const UK = { south: 49.85, north: 60.9, west: -8.2, east: 1.85 }
 
 function rnd(a: number, b: number) {

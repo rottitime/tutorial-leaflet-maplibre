@@ -43,7 +43,7 @@ export function WarningsOverlay() {
     let active = true
 
     const load = async () => {
-      const response = await fetch('/api/test/warnings?size=400&seed=23')
+      const response = await fetch('/api/test/warnings')
       const json = (await response.json()) as WarningPoint[]
       if (active) setWarnings(json)
     }

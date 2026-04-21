@@ -1,7 +1,7 @@
 import { WarningLevel, WarningPoint } from '@/types'
 import { NextResponse } from 'next/server'
 
-const WARNING_DEFAULT_COUNT = 150
+const WARNING_DEFAULT_COUNT = 400
 const WARNING_DEFAULT_SEED = 23
 const MAX_SIZE = 100_000
 const UK = { south: 49.85, north: 60.9, west: -8.2, east: 1.85 }

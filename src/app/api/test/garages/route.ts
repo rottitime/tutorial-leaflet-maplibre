@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const GARAGE_FLOOD_COUNT = 4_000
+const GARAGE_FLOOD_COUNT = 300
 const GARAGE_DUMP_SEED = 42
 const MAX_SIZE = 100_000
 
@@ -12,7 +12,7 @@ function toPositiveInt(input: string | null, fallback: number) {
 }
 
 /**
- * GET /api/test/garages?size=4000&seed=42
+ * GET /api/test/garages
  * - `size`: garage count (1..100000)
  * - `seed`: optional deterministic seed; omit for random output per request
  */

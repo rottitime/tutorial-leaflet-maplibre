@@ -30,7 +30,7 @@ export function GaragePerfGeoJsonOverlay() {
     let active = true
 
     const load = async () => {
-      const response = await fetch('/api/test/garages?size=300&seed=42')
+      const response = await fetch('/api/test/garages')
       const json = (await response.json()) as GarageGeoJson
       if (active) setData(json)
     }

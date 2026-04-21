@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-const CAFE_DEFAULT_COUNT = 120
+const CAFE_DEFAULT_COUNT = 700
 const CAFE_DEFAULT_SEED = 17
 const MAX_SIZE = 100_000
 const UK = { south: 49.85, north: 60.9, west: -8.2, east: 1.85 }
@@ -47,13 +47,14 @@ function createCafes(count: number, seed?: number): CafeFeatureCollection {
   return { type: 'FeatureCollection', features }
 }
 
-/** GET /api/test/cafes?size=120&seed=17 */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const size = toPositiveInt(searchParams.get('size'), CAFE_DEFAULT_COUNT)
   const seedRaw = searchParams.get('seed')
   const seed =
-    seedRaw === null ? CAFE_DEFAULT_SEED : toPositiveInt(seedRaw, CAFE_DEFAULT_SEED)
+    seedRaw === null
+      ? CAFE_DEFAULT_SEED
+      : toPositiveInt(seedRaw, CAFE_DEFAULT_SEED)
 
   return NextResponse.json(createCafes(size, seed), {
     headers: {

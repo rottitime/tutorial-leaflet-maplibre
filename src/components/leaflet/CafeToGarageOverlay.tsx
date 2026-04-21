@@ -143,8 +143,8 @@ export function CafeToGarageOverlay() {
 
     const load = async () => {
       const [cafesRes, garagesRes] = await Promise.all([
-        fetch('/api/test/cafes?size=700&seed=9'),
-        fetch('/api/test/garages?size=300&seed=42'),
+        fetch('/api/test/cafes'),
+        fetch('/api/test/garages'),
       ])
 
       const [cafesJson, garagesJson] = (await Promise.all([
