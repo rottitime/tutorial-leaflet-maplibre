@@ -11,6 +11,7 @@ import { GaragePerfGeoJsonOverlay } from './GaragePerfGeoJsonOverlay'
 import './leafletDefaultIcon'
 import styles from './LeafletMap.module.css'
 import { UkWeatherPatchesOverlay } from './UkWeatherPatchesOverlay'
+import { WarningsOverlay } from './WarningsOverlay'
 
 const { BaseLayer } = LayersControl
 
@@ -42,6 +43,7 @@ export default function LeafletMap() {
           <UkWeatherPatchesOverlay />
           <GaragePerfGeoJsonOverlay />
           <CafeToGarageOverlay />
+          <WarningsOverlay />
           <FerryRouteOverlay />
         </LayersControl>
       </MapContainer>

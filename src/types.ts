@@ -19,3 +19,13 @@ export type WeatherPatch = {
   radius: number
   kind: WeatherKind
 }
+
+export type WarningLevel = 'high' | 'medium'
+
+export type WarningPoint = {
+  id: string
+  position: [number, number]
+  level: WarningLevel
+  glowRadius: number
+  glowOpacity: number
+}
