@@ -14,10 +14,43 @@ import { useAnimatedPath, useRouteAnimationProgress } from './routeAnimation'
 import { syncWarningsLayer } from './WarningsLayer'
 import { syncWeatherLayer } from './UkWeatherLayer'
 
+type BaseStyleId = 'osm' | 'basicEurope'
+
+function baseStyle(styleId: BaseStyleId): maplibregl.StyleSpecification {
+  if (styleId === 'basicEurope') {
+    return {
+      version: 8,
+      sources: {
+        carto: {
+          type: 'raster',
+          tiles: ['https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          attribution: '&copy; OpenStreetMap &copy; CARTO',
+        },
+      },
+      layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
+    }
+  }
+
+  return {
+    version: 8,
+    sources: {
+      osm: {
+        type: 'raster',
+        tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+        tileSize: 256,
+        attribution: '&copy; OpenStreetMap contributors',
+      },
+    },
+    layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+  }
+}
+
 export default function MapLibreMap() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
   const [ready, setReady] = useState(false)
+  const [activeBaseStyle, setActiveBaseStyle] = useState<BaseStyleId>('osm')
 
   const garages = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.garages, null)
   const cafes = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.cafes, null)
@@ -42,18 +75,7 @@ export default function MapLibreMap() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '&copy; OpenStreetMap contributors',
-          },
-        },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-      },
+      style: baseStyle(activeBaseStyle),
       center: [-0.09, 51.505],
       zoom: 5,
     })
@@ -75,30 +97,36 @@ export default function MapLibreMap() {
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
+    map.setStyle(baseStyle(activeBaseStyle))
+  }, [activeBaseStyle, ready])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
 
     void syncGarageLayer(map, garages)
-  }, [garages, ready])
+  }, [garages, ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     syncWeatherLayer(map, weather)
-  }, [weather, ready])
+  }, [weather, ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     void syncWarningsLayer(map, warnings, zoom >= parityConfig.zoom.warningsMin)
-  }, [warnings, zoom, ready])
+  }, [warnings, zoom, ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     syncFerryLayer(map, ferry, animatedFerry)
-  }, [ferry, animatedFerry, ready])
+  }, [ferry, animatedFerry, ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current
@@ -110,10 +138,26 @@ export default function MapLibreMap() {
       zoom >= parityConfig.zoom.cafesMin,
       routeProgress,
     )
-  }, [cafePairs, zoom, routeProgress, ready])
+  }, [cafePairs, zoom, routeProgress, ready, activeBaseStyle])
 
   return (
     <div className={styles.container}>
+      <div className={styles.baseToggle}>
+        <button
+          className={activeBaseStyle === 'osm' ? styles.activeToggle : ''}
+          onClick={() => setActiveBaseStyle('osm')}
+          type="button"
+        >
+          OpenStreetMap
+        </button>
+        <button
+          className={activeBaseStyle === 'basicEurope' ? styles.activeToggle : ''}
+          onClick={() => setActiveBaseStyle('basicEurope')}
+          type="button"
+        >
+          Basic Europe
+        </button>
+      </div>
       <div ref={containerRef} className={styles.mapContainer} />
     </div>
   )
