@@ -6,6 +6,7 @@ import maplibregl, { Map } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { pairCafesToNearestGarages, syncCafeToGarageLayer } from './CafeToGarageLayer'
+import Debug from './Debug'
 import { syncFerryLayer } from './FerryRouteLayer'
 import { syncGarageLayer } from './GaragePerfLayer'
 import { MapLibreControls } from './MapLibreControls'
@@ -132,6 +133,7 @@ export default function MapLibreMap() {
 
   return (
     <div className={styles.container}>
+      <Debug map={mapRef.current} />
       <MapLibreControls
         activeBaseStyle={activeBaseStyle}
         terrainEnabled={terrainEnabled}
