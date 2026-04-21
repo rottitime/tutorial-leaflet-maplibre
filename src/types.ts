@@ -10,3 +10,12 @@ export type FerryRoute = {
   }
   path: [number, number][]
 }
+
+export type WeatherKind = 'hot' | 'cold' | 'rain'
+
+export type WeatherPatch = {
+  id: number
+  center: [number, number]
+  radius: number
+  kind: WeatherKind
+}
