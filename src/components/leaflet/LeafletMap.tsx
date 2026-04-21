@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css'
 import { LayersControl } from 'react-leaflet/LayersControl'
 import { MapContainer } from 'react-leaflet/MapContainer'
 import { TileLayer } from 'react-leaflet/TileLayer'
+import { CafeToGarageOverlay } from './CafeToGarageOverlay'
 import Debug from './Debug'
 import { FerryRouteOverlay } from './FerryRouteOverlay'
 import { GaragePerfGeoJsonOverlay } from './GaragePerfGeoJsonOverlay'
@@ -40,6 +41,7 @@ export default function LeafletMap() {
 
           <UkWeatherPatchesOverlay />
           <GaragePerfGeoJsonOverlay />
+          <CafeToGarageOverlay />
           <FerryRouteOverlay />
         </LayersControl>
       </MapContainer>
