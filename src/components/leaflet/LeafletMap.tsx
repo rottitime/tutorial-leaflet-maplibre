@@ -6,6 +6,7 @@ import { LayersControl } from 'react-leaflet/LayersControl'
 import { MapContainer } from 'react-leaflet/MapContainer'
 import { TileLayer } from 'react-leaflet/TileLayer'
 import { FerryRouteOverlay } from './FerryRouteOverlay'
+import { GaragePerfGeoJsonOverlay } from './GaragePerfGeoJsonOverlay'
 import { UkWeatherPatchesOverlay } from './UkWeatherPatchesOverlay'
 import styles from './LeafletMap.module.css'
 
@@ -35,6 +36,7 @@ export default function LeafletMap() {
           </BaseLayer>
 
           <UkWeatherPatchesOverlay />
+          <GaragePerfGeoJsonOverlay />
           <FerryRouteOverlay />
         </LayersControl>
       </MapContainer>
