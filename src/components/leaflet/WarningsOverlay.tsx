@@ -2,13 +2,13 @@
 
 import { WarningPoint } from '@/types'
 import { Icon } from 'leaflet'
-import { useEffect, useMemo, useState } from 'react'
-import { useMap, useMapEvents } from 'react-leaflet'
+import { useMemo, useState } from 'react'
 import { CircleMarker } from 'react-leaflet/CircleMarker'
 import { LayerGroup } from 'react-leaflet/LayerGroup'
 import { LayersControl } from 'react-leaflet/LayersControl'
 import { Marker } from 'react-leaflet/Marker'
 import { Tooltip } from 'react-leaflet/Tooltip'
+import { useFetchJson, ZoomWatcher } from './mapClientUtils'
 
 const { Overlay } = LayersControl
 const ZOOM_THRESHOLD = 8
@@ -19,43 +19,9 @@ const barrierIcon = new Icon({
   iconAnchor: [14, 28],
 })
 
-function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
-  const map = useMap()
-
-  useEffect(() => {
-    onZoom(map.getZoom())
-  }, [map, onZoom])
-
-  useMapEvents({
-    zoomend(e) {
-      onZoom(e.target.getZoom())
-    },
-  })
-
-  return null
-}
-
 export function WarningsOverlay() {
   const [zoom, setZoom] = useState(0)
-  const [warnings, setWarnings] = useState<WarningPoint[]>([])
-
-  useEffect(() => {
-    let active = true
-
-    const load = async () => {
-      const response = await fetch('/api/test/warnings')
-      const json = (await response.json()) as WarningPoint[]
-      if (active) setWarnings(json)
-    }
-
-    load().catch(() => {
-      if (active) setWarnings([])
-    })
-
-    return () => {
-      active = false
-    }
-  }, [])
+  const warnings = useFetchJson<WarningPoint[]>('/api/test/warnings', [])
 
   const show = zoom >= ZOOM_THRESHOLD
 

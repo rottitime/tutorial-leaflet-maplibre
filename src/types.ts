@@ -11,6 +11,20 @@ export type FerryRoute = {
   path: [number, number][]
 }
 
+export type LatLng = [number, number]
+export type LngLat = [number, number]
+
+export type PointFeature = {
+  type: 'Feature'
+  properties: { id: string }
+  geometry: { type: 'Point'; coordinates: LngLat }
+}
+
+export type PointFeatureCollection = {
+  type: 'FeatureCollection'
+  features: PointFeature[]
+}
+
 export type WeatherKind = 'hot' | 'cold' | 'rain'
 
 export type WeatherPatch = {

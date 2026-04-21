@@ -1,14 +1,15 @@
 'use client'
 
 import { Icon } from 'leaflet'
-import { useEffect, useMemo, useState } from 'react'
-import { useMap, useMapEvents } from 'react-leaflet'
+import { LatLng, PointFeature, PointFeatureCollection } from '@/types'
+import { useMemo, useState } from 'react'
 import { CircleMarker } from 'react-leaflet/CircleMarker'
 import { LayerGroup } from 'react-leaflet/LayerGroup'
 import { LayersControl } from 'react-leaflet/LayersControl'
 import { Marker } from 'react-leaflet/Marker'
 import { Polyline } from 'react-leaflet/Polyline'
 import { Popup } from 'react-leaflet/Popup'
+import { useFetchJson, ZoomWatcher } from './mapClientUtils'
 import { useAnimatedPath, useRouteAnimationProgress } from './routeAnimation'
 
 const { Overlay } = LayersControl
@@ -19,17 +20,6 @@ const cafeIcon = new Icon({
   iconAnchor: [15, 30],
 })
 
-type PointFeatureCollection = {
-  type: 'FeatureCollection'
-  features: Array<{
-    type: 'Feature'
-    properties: { id: string }
-    geometry: { type: 'Point'; coordinates: [number, number] }
-  }>
-}
-
-type LatLng = [number, number]
-
 type CafeToGarage = {
   cafeId: string
   cafe: LatLng
@@ -38,23 +28,7 @@ type CafeToGarage = {
 
 const ZOOM_THRESHOLD = 9
 
-function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
-  const map = useMap()
-
-  useEffect(() => {
-    onZoom(map.getZoom())
-  }, [map, onZoom])
-
-  useMapEvents({
-    zoomend(e) {
-      onZoom(e.target.getZoom())
-    },
-  })
-
-  return null
-}
-
-function toLatLng(feature: PointFeatureCollection['features'][number]): LatLng {
+function toLatLng(feature: PointFeature): LatLng {
   const [lng, lat] = feature.geometry.coordinates
   return [lat, lng]
 }
@@ -134,39 +108,9 @@ function AnimatedCafeRoute({
 
 export function CafeToGarageOverlay() {
   const [zoom, setZoom] = useState(0)
-  const [cafes, setCafes] = useState<PointFeatureCollection | null>(null)
-  const [garages, setGarages] = useState<PointFeatureCollection | null>(null)
+  const cafes = useFetchJson<PointFeatureCollection | null>('/api/test/cafes', null)
+  const garages = useFetchJson<PointFeatureCollection | null>('/api/test/garages', null)
   const progress = useRouteAnimationProgress()
-
-  useEffect(() => {
-    let active = true
-
-    const load = async () => {
-      const [cafesRes, garagesRes] = await Promise.all([
-        fetch('/api/test/cafes'),
-        fetch('/api/test/garages'),
-      ])
-
-      const [cafesJson, garagesJson] = (await Promise.all([
-        cafesRes.json(),
-        garagesRes.json(),
-      ])) as [PointFeatureCollection, PointFeatureCollection]
-
-      if (!active) return
-      setCafes(cafesJson)
-      setGarages(garagesJson)
-    }
-
-    load().catch(() => {
-      if (!active) return
-      setCafes(null)
-      setGarages(null)
-    })
-
-    return () => {
-      active = false
-    }
-  }, [])
 
   const paired = useMemo(() => {
     if (!cafes || !garages) return []
