@@ -8,49 +8,20 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { pairCafesToNearestGarages, syncCafeToGarageLayer } from './CafeToGarageLayer'
 import { syncFerryLayer } from './FerryRouteLayer'
 import { syncGarageLayer } from './GaragePerfLayer'
+import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
+import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
 import { useFetchJson, useMapZoom } from './mapClientUtils'
 import { useAnimatedPath, useRouteAnimationProgress } from './routeAnimation'
 import { syncWarningsLayer } from './WarningsLayer'
 import { syncWeatherLayer } from './UkWeatherLayer'
-
-type BaseStyleId = 'osm' | 'basicEurope'
-
-function baseStyle(styleId: BaseStyleId): maplibregl.StyleSpecification {
-  if (styleId === 'basicEurope') {
-    return {
-      version: 8,
-      sources: {
-        carto: {
-          type: 'raster',
-          tiles: ['https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'],
-          tileSize: 256,
-          attribution: '&copy; OpenStreetMap &copy; CARTO',
-        },
-      },
-      layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
-    }
-  }
-
-  return {
-    version: 8,
-    sources: {
-      osm: {
-        type: 'raster',
-        tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
-        tileSize: 256,
-        attribution: '&copy; OpenStreetMap contributors',
-      },
-    },
-    layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-  }
-}
 
 export default function MapLibreMap() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
   const [ready, setReady] = useState(false)
   const [activeBaseStyle, setActiveBaseStyle] = useState<BaseStyleId>('osm')
+  const [terrainEnabled, setTerrainEnabled] = useState(false)
 
   const garages = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.garages, null)
   const cafes = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.cafes, null)
@@ -75,7 +46,7 @@ export default function MapLibreMap() {
 
     const map = new maplibregl.Map({
       container: containerRef.current,
-      style: baseStyle(activeBaseStyle),
+      style: createBaseStyle(activeBaseStyle),
       center: [-0.09, 51.505],
       zoom: 5,
     })
@@ -97,8 +68,14 @@ export default function MapLibreMap() {
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    map.setStyle(baseStyle(activeBaseStyle))
+    map.setStyle(createBaseStyle(activeBaseStyle))
   }, [activeBaseStyle, ready])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    syncTerrain(map, terrainEnabled)
+  }, [terrainEnabled, ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current
@@ -142,22 +119,14 @@ export default function MapLibreMap() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.baseToggle}>
-        <button
-          className={activeBaseStyle === 'osm' ? styles.activeToggle : ''}
-          onClick={() => setActiveBaseStyle('osm')}
-          type="button"
-        >
-          OpenStreetMap
-        </button>
-        <button
-          className={activeBaseStyle === 'basicEurope' ? styles.activeToggle : ''}
-          onClick={() => setActiveBaseStyle('basicEurope')}
-          type="button"
-        >
-          Basic Europe
-        </button>
-      </div>
+      <MapLibreControls
+        activeBaseStyle={activeBaseStyle}
+        terrainEnabled={terrainEnabled}
+        onSelectBaseStyle={setActiveBaseStyle}
+        onToggleTerrain={() => setTerrainEnabled((prev) => !prev)}
+        className={styles.baseToggle}
+        activeButtonClassName={styles.activeToggle}
+      />
       <div ref={containerRef} className={styles.mapContainer} />
     </div>
   )
