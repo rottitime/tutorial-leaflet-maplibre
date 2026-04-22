@@ -1,5 +1,6 @@
 'use client'
 
+import { parityConfig } from '@/lib/parityConfig'
 import { LatLng, PointFeatureCollection } from '@/types'
 import { FeatureCollection, LineString, Point } from 'geojson'
 import { Map } from 'maplibre-gl'
@@ -69,13 +70,10 @@ export function buildCafeDensePaths(pairs: Pair[]): CafeDensePath[] {
 
 /**
  * Creates sources/layers and sets the base (static) data.
- * Runs only when pairs/visibility change — NOT every animation frame.
+ * Visibility is handled natively by `minzoom` on each layer — no per-zoom
+ * React work needed.
  */
-export async function setupCafeToGarageLayer(
-  map: Map,
-  pairs: Pair[],
-  visible: boolean,
-) {
+export async function setupCafeToGarageLayer(map: Map, pairs: Pair[]) {
   await ensureImage(map, ICON_ID, '/icons/cafe.png')
 
   const cafesGeo: FeatureCollection<Point> = {
@@ -111,10 +109,13 @@ export async function setupCafeToGarageLayer(
   upsertGeoJsonSource(map, ROUTE_BASE_SOURCE_ID, baseRoutes)
   upsertGeoJsonSource(map, ROUTE_ANIM_SOURCE_ID, emptyAnim)
 
+  const minzoom = parityConfig.zoom.cafesMin
+
   ensureLayer(map, {
     id: ROUTE_BASE_LAYER_ID,
     type: 'line',
     source: ROUTE_BASE_SOURCE_ID,
+    minzoom,
     paint: {
       'line-color': '#334155',
       'line-width': 1,
@@ -126,6 +127,7 @@ export async function setupCafeToGarageLayer(
     id: ROUTE_ANIM_LAYER_ID,
     type: 'line',
     source: ROUTE_ANIM_SOURCE_ID,
+    minzoom,
     paint: {
       'line-color': '#16a34a',
       'line-width': 2,
@@ -137,6 +139,7 @@ export async function setupCafeToGarageLayer(
     id: CAFE_LAYER_ID,
     type: 'symbol',
     source: CAFE_SOURCE_ID,
+    minzoom,
     layout: {
       'icon-image': ICON_ID,
       'icon-size': 0.75,
@@ -144,11 +147,6 @@ export async function setupCafeToGarageLayer(
       'icon-allow-overlap': true,
     },
   })
-
-  const visibility = visible ? 'visible' : 'none'
-  map.setLayoutProperty(ROUTE_BASE_LAYER_ID, 'visibility', visibility)
-  map.setLayoutProperty(ROUTE_ANIM_LAYER_ID, 'visibility', visibility)
-  map.setLayoutProperty(CAFE_LAYER_ID, 'visibility', visibility)
 }
 
 /**

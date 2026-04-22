@@ -1,5 +1,6 @@
 'use client'
 
+import { parityConfig } from '@/lib/parityConfig'
 import { WarningPoint } from '@/types'
 import { ensureImage, ensureLayer, upsertGeoJsonSource } from './mapClientUtils'
 import { FeatureCollection, Point } from 'geojson'
@@ -11,7 +12,11 @@ const ICON_LAYER_ID = 'warnings-icon'
 const LABEL_LAYER_ID = 'warnings-label'
 const ICON_ID = 'warning-icon'
 
-export async function syncWarningsLayer(map: Map, warnings: WarningPoint[], visible: boolean) {
+/**
+ * Creates sources/layers with native `minzoom` visibility.
+ * Call only when data changes — zoom changes are handled by MapLibre.
+ */
+export async function syncWarningsLayer(map: Map, warnings: WarningPoint[]) {
   const data: FeatureCollection<Point> = {
     type: 'FeatureCollection',
     features: warnings.map((w) => ({
@@ -29,10 +34,13 @@ export async function syncWarningsLayer(map: Map, warnings: WarningPoint[], visi
   await ensureImage(map, ICON_ID, '/icons/barrier.png')
   upsertGeoJsonSource(map, SOURCE_ID, data)
 
+  const minzoom = parityConfig.zoom.warningsMin
+
   ensureLayer(map, {
     id: GLOW_LAYER_ID,
     type: 'circle',
     source: SOURCE_ID,
+    minzoom,
     paint: {
       'circle-color': ['get', 'color'],
       'circle-opacity': ['get', 'opacity'],
@@ -45,6 +53,7 @@ export async function syncWarningsLayer(map: Map, warnings: WarningPoint[], visi
     id: ICON_LAYER_ID,
     type: 'symbol',
     source: SOURCE_ID,
+    minzoom,
     layout: {
       'icon-image': ICON_ID,
       'icon-size': 0.7,
@@ -57,6 +66,7 @@ export async function syncWarningsLayer(map: Map, warnings: WarningPoint[], visi
     id: LABEL_LAYER_ID,
     type: 'symbol',
     source: SOURCE_ID,
+    minzoom,
     layout: {
       'text-field': ['get', 'level'],
       'text-size': 11,
@@ -69,9 +79,4 @@ export async function syncWarningsLayer(map: Map, warnings: WarningPoint[], visi
       'text-halo-width': 1,
     },
   })
-
-  const visibility = visible ? 'visible' : 'none'
-  map.setLayoutProperty(GLOW_LAYER_ID, 'visibility', visibility)
-  map.setLayoutProperty(ICON_LAYER_ID, 'visibility', visibility)
-  map.setLayoutProperty(LABEL_LAYER_ID, 'visibility', visibility)
 }

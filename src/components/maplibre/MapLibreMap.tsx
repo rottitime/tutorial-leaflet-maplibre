@@ -23,9 +23,10 @@ import {
   setupFerryLayer,
 } from './FerryRouteLayer'
 import { syncGarageLayer } from './GaragePerfLayer'
-import { useFetchJson, useMapCenter, useMapZoom } from './mapClientUtils'
+import { useFetchJson } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
+import { MapViewDisplay } from './MapViewDisplay'
 import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
 import { easeInOutCubic } from './routeAnimation'
@@ -55,9 +56,6 @@ export default function MapLibreMap() {
     null,
   )
 
-  const zoom = useMapZoom(mapRef.current)
-  const center = useMapCenter(mapRef.current)
-
   const cafePairs = useMemo(
     () => pairCafesToNearestGarages(cafes, garages),
     [cafes, garages],
@@ -71,7 +69,6 @@ export default function MapLibreMap() {
 
   const cafeDenseRef = useRef<CafeDensePath[]>(cafeDensePaths)
   const ferryDenseRef = useRef<[number, number][]>(ferryDensePath)
-  const cafesVisibleRef = useRef(false)
 
   useEffect(() => {
     cafeDenseRef.current = cafeDensePaths
@@ -135,8 +132,8 @@ export default function MapLibreMap() {
     const map = mapRef.current
     if (!map || !ready) return
 
-    void syncWarningsLayer(map, warnings, zoom >= parityConfig.zoom.warningsMin)
-  }, [warnings, zoom, ready, activeBaseStyle])
+    void syncWarningsLayer(map, warnings)
+  }, [warnings, ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current
@@ -149,16 +146,15 @@ export default function MapLibreMap() {
     const map = mapRef.current
     if (!map || !ready) return
 
-    const cafesVisible = zoom >= parityConfig.zoom.cafesMin
-    cafesVisibleRef.current = cafesVisible
-    void setupCafeToGarageLayer(map, cafePairs, cafesVisible)
-  }, [cafePairs, zoom, ready, activeBaseStyle])
+    void setupCafeToGarageLayer(map, cafePairs)
+  }, [cafePairs, ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     const { drawMs, holdMs } = parityConfig.animation
+    const cafesMinZoom = parityConfig.zoom.cafesMin
     const loopMs = drawMs + holdMs
     const start = performance.now()
     let frame = 0
@@ -171,7 +167,10 @@ export default function MapLibreMap() {
       if (ferryDenseRef.current.length) {
         animateFerryLayer(map, ferryDenseRef.current, progress)
       }
-      if (cafesVisibleRef.current && cafeDenseRef.current.length) {
+      if (
+        cafeDenseRef.current.length &&
+        map.getZoom() >= cafesMinZoom
+      ) {
         animateCafeToGarageLayer(map, cafeDenseRef.current, progress)
       }
 
@@ -187,11 +186,9 @@ export default function MapLibreMap() {
     if (!map || !ready) return
     syncOpenSourceBuildingsLayer(
       map,
-      openBuildingsEnabled &&
-        terrainEnabled &&
-        zoom >= parityConfig.zoom.openBuildingsMin,
+      openBuildingsEnabled && terrainEnabled,
     )
-  }, [openBuildingsEnabled, terrainEnabled, zoom, ready, activeBaseStyle])
+  }, [openBuildingsEnabled, terrainEnabled, ready, activeBaseStyle])
 
   return (
     <>
@@ -208,10 +205,10 @@ export default function MapLibreMap() {
         />
         <div ref={containerRef} className={styles.mapContainer} />
       </div>
-      <p className={styles.zoomDisplay}>
-        Zoom: {zoom.toFixed(2)} · Center: {center.lat.toFixed(4)},{' '}
-        {center.lng.toFixed(4)}
-      </p>
+      <MapViewDisplay
+        map={ready ? mapRef.current : null}
+        className={styles.zoomDisplay}
+      />
     </>
   )
 }
