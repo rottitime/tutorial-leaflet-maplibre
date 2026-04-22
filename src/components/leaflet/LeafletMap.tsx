@@ -6,7 +6,6 @@ import { LayersControl } from 'react-leaflet/LayersControl'
 import { MapContainer } from 'react-leaflet/MapContainer'
 import { TileLayer } from 'react-leaflet/TileLayer'
 import { CafeToGarageOverlay } from './CafeToGarageOverlay'
-import Debug from './Debug'
 import { FerryRouteOverlay } from './FerryRouteOverlay'
 import { GaragePerfGeoJsonOverlay } from './GaragePerfGeoJsonOverlay'
 import './leafletDefaultIcon'
@@ -30,7 +29,6 @@ export default function LeafletMap() {
           zoom={INITIAL_ZOOM}
           className={styles.mapContainer}
         >
-          <Debug />
           <ZoomWatcher onZoom={setZoom} />
 
           <LayersControl position="topright">

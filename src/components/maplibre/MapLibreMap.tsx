@@ -14,7 +14,6 @@ import {
   pairCafesToNearestGarages,
   syncCafeToGarageLayer,
 } from './CafeToGarageLayer'
-import Debug from './Debug'
 import { syncFerryLayer } from './FerryRouteLayer'
 import { syncGarageLayer } from './GaragePerfLayer'
 import { useFetchJson, useMapZoom } from './mapClientUtils'
@@ -151,7 +150,6 @@ export default function MapLibreMap() {
   return (
     <>
       <div className={styles.container}>
-        <Debug map={mapRef.current} />
         <MapLibreControls
           activeBaseStyle={activeBaseStyle}
           terrainEnabled={terrainEnabled}
