@@ -18,6 +18,75 @@ const FOLLOW_ZOOM = 10
 const FOLLOW_PITCH = 55
 const STEP_MS = 20
 
+const RADAR_FRAME_COUNT = 5
+const RADAR_FRAME_MS = 200
+const RADAR_COUNT = 5
+const RADAR_HALF_DEG = 0.08
+const RADAR_OFFSET_DEG = 0.35
+const RADAR_URL = (frame: number) =>
+  `https://maplibre.org/maplibre-gl-js/docs/assets/radar${frame}.gif`
+
+type RadarPatch = {
+  sourceId: string
+  layerId: string
+}
+
+/**
+ * Deterministic small RNG so patch placement is stable across renders.
+ */
+function mulberry32(seed: number) {
+  let t = seed >>> 0
+  return () => {
+    t += 0x6d2b79f5
+    let r = t
+    r = Math.imul(r ^ (r >>> 15), r | 1)
+    r ^= r + Math.imul(r ^ (r >>> 7), r | 61)
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+function radarPatches(
+  dense: [number, number][],
+): Array<{
+  id: number
+  coordinates: [[number, number], [number, number], [number, number], [number, number]]
+}> {
+  const rand = mulberry32(42)
+  const out: Array<{
+    id: number
+    coordinates: [
+      [number, number],
+      [number, number],
+      [number, number],
+      [number, number],
+    ]
+  }> = []
+  for (let i = 0; i < RADAR_COUNT; i++) {
+    const t = (i + rand() * 0.8) / RADAR_COUNT
+    const idx = Math.min(
+      dense.length - 1,
+      Math.max(0, Math.round(t * (dense.length - 1))),
+    )
+    const [lng, lat] = dense[idx]
+
+    const dx = (rand() - 0.5) * 2 * RADAR_OFFSET_DEG
+    const dy = (rand() - 0.5) * 2 * RADAR_OFFSET_DEG
+    const cx = lng + dx
+    const cy = lat + dy
+
+    out.push({
+      id: i,
+      coordinates: [
+        [cx - RADAR_HALF_DEG, cy + RADAR_HALF_DEG],
+        [cx + RADAR_HALF_DEG, cy + RADAR_HALF_DEG],
+        [cx + RADAR_HALF_DEG, cy - RADAR_HALF_DEG],
+        [cx - RADAR_HALF_DEG, cy - RADAR_HALF_DEG],
+      ],
+    })
+  }
+  return out
+}
+
 function latLngPathToLngLat(path: [number, number][]) {
   return path.map(([lat, lng]) => [lng, lat] as [number, number])
 }
@@ -41,6 +110,8 @@ export default function FerryTraceFeature() {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<Map | null>(null)
   const timerRef = useRef<number | null>(null)
+  const radarTimerRef = useRef<number | null>(null)
+  const radarPatchesRef = useRef<RadarPatch[]>([])
 
   const [ready, setReady] = useState(false)
   const [route, setRoute] = useState<FerryRoute | null>(null)
@@ -68,8 +139,13 @@ export default function FerryTraceFeature() {
         window.clearInterval(timerRef.current)
         timerRef.current = null
       }
+      if (radarTimerRef.current !== null) {
+        window.clearInterval(radarTimerRef.current)
+        radarTimerRef.current = null
+      }
       map.remove()
       mapRef.current = null
+      radarPatchesRef.current = []
       setReady(false)
     }
   }, [])
@@ -151,6 +227,71 @@ export default function FerryTraceFeature() {
       new maplibregl.LngLatBounds(coords[0], coords[0]),
     )
     map.fitBounds(bounds, { padding: 60, duration: 0 })
+  }, [ready, route])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready || !route) return
+    if (radarPatchesRef.current.length > 0) return
+
+    const dense = densifyPath(route.path, 80).map(
+      ([lat, lng]) => [lng, lat] as [number, number],
+    )
+    if (dense.length < 2) return
+
+    const patches = radarPatches(dense)
+    const added: RadarPatch[] = []
+
+    let currentFrame = 0
+
+    patches.forEach((p) => {
+      const sourceId = `radar-${p.id}`
+      const layerId = `radar-layer-${p.id}`
+      if (map.getSource(sourceId)) return
+
+      map.addSource(sourceId, {
+        type: 'image',
+        url: RADAR_URL(currentFrame),
+        coordinates: p.coordinates,
+      })
+      map.addLayer(
+        {
+          id: layerId,
+          type: 'raster',
+          source: sourceId,
+          paint: {
+            'raster-fade-duration': 0,
+            'raster-opacity': 0.7,
+          },
+        },
+        BASE_LAYER_ID,
+      )
+      added.push({ sourceId, layerId })
+    })
+
+    radarPatchesRef.current = added
+
+    radarTimerRef.current = window.setInterval(() => {
+      currentFrame = (currentFrame + 1) % RADAR_FRAME_COUNT
+      for (const { sourceId } of added) {
+        const src = map.getSource(sourceId) as
+          | maplibregl.ImageSource
+          | undefined
+        if (src) src.updateImage({ url: RADAR_URL(currentFrame) })
+      }
+    }, RADAR_FRAME_MS)
+
+    return () => {
+      if (radarTimerRef.current !== null) {
+        window.clearInterval(radarTimerRef.current)
+        radarTimerRef.current = null
+      }
+      for (const { sourceId, layerId } of added) {
+        if (map.getLayer(layerId)) map.removeLayer(layerId)
+        if (map.getSource(sourceId)) map.removeSource(sourceId)
+      }
+      radarPatchesRef.current = []
+    }
   }, [ready, route])
 
   const startTrace = () => {
