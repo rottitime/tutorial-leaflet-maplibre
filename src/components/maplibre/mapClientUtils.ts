@@ -48,6 +48,25 @@ export function useMapZoom(map: Map | null) {
   return zoom
 }
 
+export function useMapCenter(map: Map | null) {
+  const [center, setCenter] = useState({ lat: 0, lng: 0 })
+
+  useEffect(() => {
+    if (!map) return
+    const sync = () => {
+      const c = map.getCenter()
+      setCenter({ lat: c.lat, lng: c.lng })
+    }
+    sync()
+    map.on('moveend', sync)
+    return () => {
+      map.off('moveend', sync)
+    }
+  }, [map])
+
+  return center
+}
+
 export function upsertGeoJsonSource(map: Map, sourceId: string, data: GeoJSON.FeatureCollection | GeoJSON.Feature) {
   const source = map.getSource(sourceId) as GeoJSONSource | undefined
   if (source) {

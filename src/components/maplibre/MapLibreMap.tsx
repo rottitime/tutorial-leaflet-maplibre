@@ -16,7 +16,7 @@ import {
 } from './CafeToGarageLayer'
 import { syncFerryLayer } from './FerryRouteLayer'
 import { syncGarageLayer } from './GaragePerfLayer'
-import { useFetchJson, useMapZoom } from './mapClientUtils'
+import { useFetchJson, useMapCenter, useMapZoom } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
 import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
@@ -49,6 +49,7 @@ export default function MapLibreMap() {
   )
 
   const zoom = useMapZoom(mapRef.current)
+  const center = useMapCenter(mapRef.current)
   const routeProgress = useRouteAnimationProgress(
     parityConfig.animation.drawMs,
     parityConfig.animation.holdMs,
@@ -162,7 +163,10 @@ export default function MapLibreMap() {
         />
         <div ref={containerRef} className={styles.mapContainer} />
       </div>
-      <p className={styles.zoomDisplay}>Zoom: {zoom.toFixed(2)}</p>
+      <p className={styles.zoomDisplay}>
+        Zoom: {zoom.toFixed(2)} · Center: {center.lat.toFixed(4)},{' '}
+        {center.lng.toFixed(4)}
+      </p>
     </>
   )
 }

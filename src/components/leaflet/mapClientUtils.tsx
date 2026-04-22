@@ -42,3 +42,25 @@ export function ZoomWatcher({ onZoom }: { onZoom: (z: number) => void }) {
 
   return null
 }
+
+export function CenterWatcher({
+  onCenter,
+}: {
+  onCenter: (c: { lat: number; lng: number }) => void
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    const c = map.getCenter()
+    onCenter({ lat: c.lat, lng: c.lng })
+  }, [map, onCenter])
+
+  useMapEvents({
+    moveend(e) {
+      const c = e.target.getCenter()
+      onCenter({ lat: c.lat, lng: c.lng })
+    },
+  })
+
+  return null
+}

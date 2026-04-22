@@ -10,26 +10,32 @@ import { FerryRouteOverlay } from './FerryRouteOverlay'
 import { GaragePerfGeoJsonOverlay } from './GaragePerfGeoJsonOverlay'
 import './leafletDefaultIcon'
 import styles from './LeafletMap.module.css'
-import { ZoomWatcher } from './mapClientUtils'
+import { CenterWatcher, ZoomWatcher } from './mapClientUtils'
 import { UkWeatherPatchesOverlay } from './UkWeatherPatchesOverlay'
 import { WarningsOverlay } from './WarningsOverlay'
 
 const { BaseLayer } = LayersControl
 
 const INITIAL_ZOOM = 5
+const INITIAL_CENTER: [number, number] = [51.505, -0.09]
 
 export default function LeafletMap() {
   const [zoom, setZoom] = useState(INITIAL_ZOOM)
+  const [center, setCenter] = useState({
+    lat: INITIAL_CENTER[0],
+    lng: INITIAL_CENTER[1],
+  })
 
   return (
     <>
       <div className={styles.container}>
         <MapContainer
-          center={[51.505, -0.09]}
+          center={INITIAL_CENTER}
           zoom={INITIAL_ZOOM}
           className={styles.mapContainer}
         >
           <ZoomWatcher onZoom={setZoom} />
+          <CenterWatcher onCenter={setCenter} />
 
           <LayersControl position="topright">
             <BaseLayer checked name="OpenStreetMap">
@@ -54,7 +60,10 @@ export default function LeafletMap() {
           </LayersControl>
         </MapContainer>
       </div>
-      <p className={styles.zoomDisplay}>Zoom: {zoom.toFixed(2)}</p>
+      <p className={styles.zoomDisplay}>
+        Zoom: {zoom.toFixed(2)} · Center: {center.lat.toFixed(4)},{' '}
+        {center.lng.toFixed(4)}
+      </p>
     </>
   )
 }
