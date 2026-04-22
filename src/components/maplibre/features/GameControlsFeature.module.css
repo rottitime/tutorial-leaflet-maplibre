@@ -1,0 +1,42 @@
+.container {
+  position: relative;
+}
+
+.controls {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.controls button {
+  border: 1px solid #94a3b8;
+  background: #fff;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.controls button:hover {
+  background: #f8fafc;
+}
+
+.activeToggle {
+  border-color: #1d4ed8 !important;
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+}
+
+.hint {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.mapContainer {
+  height: 600px;
+  width: 100%;
+  background-color: #ddd;
+}
