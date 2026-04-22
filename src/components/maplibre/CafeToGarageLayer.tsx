@@ -1,10 +1,10 @@
 'use client'
 
 import { LatLng, PointFeatureCollection } from '@/types'
-import { densifyPath } from './routeAnimation'
-import { ensureImage, ensureLayer, upsertGeoJsonSource } from './mapClientUtils'
 import { FeatureCollection, LineString, Point } from 'geojson'
 import { Map } from 'maplibre-gl'
+import { ensureImage, ensureLayer, upsertGeoJsonSource } from './mapClientUtils'
+import { densifyPath } from './routeAnimation'
 
 const ICON_ID = 'cafe-icon'
 const CAFE_SOURCE_ID = 'cafes-source'
@@ -14,7 +14,12 @@ const CAFE_LAYER_ID = 'cafes-layer'
 const ROUTE_BASE_LAYER_ID = 'cafe-routes-base-layer'
 const ROUTE_ANIM_LAYER_ID = 'cafe-routes-anim-layer'
 
+const STEPS_PER_SEGMENT = 24
+
 type Pair = { id: string; cafe: LatLng; garage: LatLng }
+
+/** Pre-densified path per pair, computed once when pairs change. */
+export type CafeDensePath = { id: string; dense: LatLng[] }
 
 function toLatLng([lng, lat]: [number, number]): LatLng {
   return [lat, lng]
@@ -31,7 +36,9 @@ export function pairCafesToNearestGarages(
   garages: PointFeatureCollection | null,
 ): Pair[] {
   if (!cafes || !garages) return []
-  const garagePositions = garages.features.map((f) => toLatLng(f.geometry.coordinates))
+  const garagePositions = garages.features.map((f) =>
+    toLatLng(f.geometry.coordinates),
+  )
   if (!garagePositions.length) return []
 
   return cafes.features.map((cafeFeature) => {
@@ -52,39 +59,22 @@ export function pairCafesToNearestGarages(
   })
 }
 
-function routeFeature(pair: Pair, progress: number) {
-  const dense = densifyPath([pair.cafe, pair.garage], 24)
-  const end = Math.max(1, Math.round(progress * (dense.length - 1))) + 1
-  const animated = dense.slice(0, end)
-
-  return {
-    base: {
-      type: 'Feature' as const,
-      properties: {},
-      geometry: {
-        type: 'LineString' as const,
-        coordinates: [
-          [pair.cafe[1], pair.cafe[0]],
-          [pair.garage[1], pair.garage[0]],
-        ],
-      },
-    },
-    anim: {
-      type: 'Feature' as const,
-      properties: {},
-      geometry: {
-        type: 'LineString' as const,
-        coordinates: animated.map((p) => [p[1], p[0]]),
-      },
-    },
-  }
+/** Densify all paths once so the animation loop can just slice. */
+export function buildCafeDensePaths(pairs: Pair[]): CafeDensePath[] {
+  return pairs.map((p) => ({
+    id: p.id,
+    dense: densifyPath([p.cafe, p.garage], STEPS_PER_SEGMENT),
+  }))
 }
 
-export async function syncCafeToGarageLayer(
+/**
+ * Creates sources/layers and sets the base (static) data.
+ * Runs only when pairs/visibility change — NOT every animation frame.
+ */
+export async function setupCafeToGarageLayer(
   map: Map,
   pairs: Pair[],
   visible: boolean,
-  progress: number,
 ) {
   await ensureImage(map, ICON_ID, '/icons/cafe.png')
 
@@ -99,30 +89,48 @@ export async function syncCafeToGarageLayer(
 
   const baseRoutes: FeatureCollection<LineString> = {
     type: 'FeatureCollection',
-    features: pairs.map((p) => routeFeature(p, progress).base),
+    features: pairs.map((p) => ({
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: [
+          [p.cafe[1], p.cafe[0]],
+          [p.garage[1], p.garage[0]],
+        ],
+      },
+    })),
   }
 
-  const animRoutes: FeatureCollection<LineString> = {
+  const emptyAnim: FeatureCollection<LineString> = {
     type: 'FeatureCollection',
-    features: pairs.map((p) => routeFeature(p, progress).anim),
+    features: [],
   }
 
   upsertGeoJsonSource(map, CAFE_SOURCE_ID, cafesGeo)
   upsertGeoJsonSource(map, ROUTE_BASE_SOURCE_ID, baseRoutes)
-  upsertGeoJsonSource(map, ROUTE_ANIM_SOURCE_ID, animRoutes)
+  upsertGeoJsonSource(map, ROUTE_ANIM_SOURCE_ID, emptyAnim)
 
   ensureLayer(map, {
     id: ROUTE_BASE_LAYER_ID,
     type: 'line',
     source: ROUTE_BASE_SOURCE_ID,
-    paint: { 'line-color': '#334155', 'line-width': 1, 'line-opacity': 0.2 },
+    paint: {
+      'line-color': '#334155',
+      'line-width': 1,
+      'line-opacity': 0.2,
+    },
   })
 
   ensureLayer(map, {
     id: ROUTE_ANIM_LAYER_ID,
     type: 'line',
     source: ROUTE_ANIM_SOURCE_ID,
-    paint: { 'line-color': '#16a34a', 'line-width': 2, 'line-opacity': 0.85 },
+    paint: {
+      'line-color': '#16a34a',
+      'line-width': 2,
+      'line-opacity': 0.85,
+    },
   })
 
   ensureLayer(map, {
@@ -141,4 +149,41 @@ export async function syncCafeToGarageLayer(
   map.setLayoutProperty(ROUTE_BASE_LAYER_ID, 'visibility', visibility)
   map.setLayoutProperty(ROUTE_ANIM_LAYER_ID, 'visibility', visibility)
   map.setLayoutProperty(CAFE_LAYER_ID, 'visibility', visibility)
+}
+
+/**
+ * Per-frame update. Slices pre-densified paths and pushes to the anim source.
+ * Does NOT rebuild the static base layer.
+ */
+export function animateCafeToGarageLayer(
+  map: Map,
+  densePaths: CafeDensePath[],
+  progress: number,
+) {
+  if (!densePaths.length) return
+  if (!map.getSource(ROUTE_ANIM_SOURCE_ID)) return
+
+  const features: FeatureCollection<LineString>['features'] = new Array(
+    densePaths.length,
+  )
+
+  for (let i = 0; i < densePaths.length; i++) {
+    const { dense } = densePaths[i]
+    const end = Math.max(1, Math.round(progress * (dense.length - 1))) + 1
+    const coords = new Array(Math.min(end, dense.length))
+    for (let j = 0; j < coords.length; j++) {
+      const p = dense[j]
+      coords[j] = [p[1], p[0]]
+    }
+    features[i] = {
+      type: 'Feature',
+      properties: {},
+      geometry: { type: 'LineString', coordinates: coords },
+    }
+  }
+
+  upsertGeoJsonSource(map, ROUTE_ANIM_SOURCE_ID, {
+    type: 'FeatureCollection',
+    features,
+  })
 }

@@ -1,7 +1,8 @@
 'use client'
 
+import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { LayersControl } from 'react-leaflet/LayersControl'
 import { MapContainer } from 'react-leaflet/MapContainer'
 import { TileLayer } from 'react-leaflet/TileLayer'
@@ -26,6 +27,8 @@ export default function LeafletMap() {
     lng: INITIAL_CENTER[1],
   })
 
+  const canvasRenderer = useMemo(() => L.canvas({ padding: 0.5 }), [])
+
   return (
     <>
       <div className={styles.container}>
@@ -33,6 +36,8 @@ export default function LeafletMap() {
           center={INITIAL_CENTER}
           zoom={INITIAL_ZOOM}
           className={styles.mapContainer}
+          renderer={canvasRenderer}
+          preferCanvas
         >
           <ZoomWatcher onZoom={setZoom} />
           <CenterWatcher onCenter={setCenter} />

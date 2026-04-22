@@ -1,17 +1,17 @@
 'use client'
 
-import { Icon } from 'leaflet'
 import { parityConfig } from '@/lib/parityConfig'
 import { LatLng, PointFeature, PointFeatureCollection } from '@/types'
-import { useMemo, useState } from 'react'
-import { CircleMarker } from 'react-leaflet/CircleMarker'
+import { useLeafletContext } from '@react-leaflet/core'
+import L, { Icon } from 'leaflet'
+import { useEffect, useMemo, useState } from 'react'
 import { LayerGroup } from 'react-leaflet/LayerGroup'
 import { LayersControl } from 'react-leaflet/LayersControl'
 import { Marker } from 'react-leaflet/Marker'
 import { Polyline } from 'react-leaflet/Polyline'
 import { Popup } from 'react-leaflet/Popup'
 import { useFetchJson, ZoomWatcher } from './mapClientUtils'
-import { useAnimatedPath, useRouteAnimationProgress } from './routeAnimation'
+import { densifyPath, easeInOutCubic } from './routeAnimation'
 
 const { Overlay } = LayersControl
 
@@ -28,6 +28,7 @@ type CafeToGarage = {
 }
 
 const ZOOM_THRESHOLD = parityConfig.zoom.cafesMin
+const STEPS_PER_SEGMENT = 24
 
 function toLatLng(feature: PointFeature): LatLng {
   const [lng, lat] = feature.geometry.coordinates
@@ -69,54 +70,99 @@ function pairCafesToNearestGarages(
   })
 }
 
-function AnimatedCafeRoute({
-  cafe,
-  garage,
-  cafeId,
-  progress,
-}: {
-  cafe: LatLng
-  garage: LatLng
-  cafeId: string
-  progress: number
-}) {
-  const animated = useAnimatedPath([cafe, garage], progress, 24)
-  const head = animated[animated.length - 1]
+/**
+ * One imperative multi-polyline for all 700 animated cafe→garage lines,
+ * plus one circle-marker head per route. Driven by a single rAF loop.
+ * No React re-renders per frame.
+ */
+function AnimatedCafeRoutes({ pairs }: { pairs: CafeToGarage[] }) {
+  const ctx = useLeafletContext()
 
-  if (!head) return null
-
-  return (
-    <LayerGroup>
-      <Polyline
-        positions={[cafe, garage]}
-        pathOptions={{ color: '#334155', weight: 1, opacity: 0.2 }}
-      />
-      <Polyline
-        positions={animated}
-        pathOptions={{ color: '#16a34a', weight: 2, opacity: 0.85 }}
-      />
-      <CircleMarker
-        center={head}
-        radius={3}
-        pathOptions={{ color: '#15803d', fillColor: '#22c55e', fillOpacity: 1 }}
-      />
-      <Marker position={cafe} icon={cafeIcon}>
-        <Popup>{cafeId}</Popup>
-      </Marker>
-    </LayerGroup>
+  const densePaths = useMemo(
+    () =>
+      pairs.map((p) => densifyPath([p.cafe, p.garage], STEPS_PER_SEGMENT)),
+    [pairs],
   )
+
+  useEffect(() => {
+    const container = ctx.layerContainer ?? ctx.map
+    if (!container || !densePaths.length) return
+
+    const animLine = L.polyline([], {
+      color: '#16a34a',
+      weight: 2,
+      opacity: 0.85,
+    })
+    container.addLayer(animLine)
+
+    const heads: L.CircleMarker[] = densePaths.map((dense) =>
+      L.circleMarker(dense[0] as L.LatLngExpression, {
+        radius: 3,
+        color: '#15803d',
+        fillColor: '#22c55e',
+        fillOpacity: 1,
+      }),
+    )
+    heads.forEach((h) => container.addLayer(h))
+
+    const { drawMs, holdMs } = parityConfig.animation
+    const loopMs = drawMs + holdMs
+    const start = performance.now()
+    let frame = 0
+
+    const tick = (now: number) => {
+      const elapsed = (now - start) % loopMs
+      const progress =
+        elapsed < drawMs ? easeInOutCubic(elapsed / drawMs) : 1
+
+      const slices: L.LatLngExpression[][] = new Array(densePaths.length)
+      for (let i = 0; i < densePaths.length; i++) {
+        const dense = densePaths[i]
+        const end =
+          Math.max(1, Math.round(progress * (dense.length - 1))) + 1
+        const len = Math.min(end, dense.length)
+        slices[i] = dense.slice(0, len) as L.LatLngExpression[]
+
+        const headPos = slices[i][slices[i].length - 1]
+        if (headPos) heads[i].setLatLng(headPos)
+      }
+      animLine.setLatLngs(slices)
+
+      frame = requestAnimationFrame(tick)
+    }
+    frame = requestAnimationFrame(tick)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      container.removeLayer(animLine)
+      heads.forEach((h) => container.removeLayer(h))
+    }
+  }, [ctx, densePaths])
+
+  return null
 }
 
 export function CafeToGarageOverlay() {
   const [zoom, setZoom] = useState(0)
-  const cafes = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.cafes, null)
-  const garages = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.garages, null)
-  const progress = useRouteAnimationProgress()
+  const cafes = useFetchJson<PointFeatureCollection | null>(
+    parityConfig.fetch.cafes,
+    null,
+  )
+  const garages = useFetchJson<PointFeatureCollection | null>(
+    parityConfig.fetch.garages,
+    null,
+  )
 
   const paired = useMemo(() => {
     if (!cafes || !garages) return []
     return pairCafesToNearestGarages(cafes, garages)
   }, [cafes, garages])
+
+  const baseMultiLine = useMemo(
+    () =>
+      paired.map((p) => [p.cafe, p.garage] as LatLng[]) as L.LatLngExpression[][],
+    [paired],
+  )
 
   const show = zoom >= ZOOM_THRESHOLD
 
@@ -125,16 +171,20 @@ export function CafeToGarageOverlay() {
       <LayerGroup>
         <ZoomWatcher onZoom={setZoom} />
 
-        {show &&
-          paired.map((p) => (
-            <AnimatedCafeRoute
-              key={p.cafeId}
-              cafe={p.cafe}
-              garage={p.garage}
-              cafeId={p.cafeId}
-              progress={progress}
+        {show && baseMultiLine.length > 0 && (
+          <>
+            <Polyline
+              positions={baseMultiLine}
+              pathOptions={{ color: '#334155', weight: 1, opacity: 0.2 }}
             />
-          ))}
+            <AnimatedCafeRoutes pairs={paired} />
+            {paired.map((p) => (
+              <Marker key={p.cafeId} position={p.cafe} icon={cafeIcon}>
+                <Popup>{p.cafeId}</Popup>
+              </Marker>
+            ))}
+          </>
+        )}
       </LayerGroup>
     </Overlay>
   )

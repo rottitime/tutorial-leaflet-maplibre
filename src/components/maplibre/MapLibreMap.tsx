@@ -11,17 +11,24 @@ import maplibregl, { Map } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  animateCafeToGarageLayer,
+  buildCafeDensePaths,
+  CafeDensePath,
   pairCafesToNearestGarages,
-  syncCafeToGarageLayer,
+  setupCafeToGarageLayer,
 } from './CafeToGarageLayer'
-import { syncFerryLayer } from './FerryRouteLayer'
+import {
+  animateFerryLayer,
+  buildFerryDensePath,
+  setupFerryLayer,
+} from './FerryRouteLayer'
 import { syncGarageLayer } from './GaragePerfLayer'
 import { useFetchJson, useMapCenter, useMapZoom } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
 import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
-import { useAnimatedPath, useRouteAnimationProgress } from './routeAnimation'
+import { easeInOutCubic } from './routeAnimation'
 import { syncWeatherLayer } from './UkWeatherLayer'
 import { syncWarningsLayer } from './WarningsLayer'
 
@@ -50,16 +57,29 @@ export default function MapLibreMap() {
 
   const zoom = useMapZoom(mapRef.current)
   const center = useMapCenter(mapRef.current)
-  const routeProgress = useRouteAnimationProgress(
-    parityConfig.animation.drawMs,
-    parityConfig.animation.holdMs,
-  )
-  const animatedFerry = useAnimatedPath(ferry?.path ?? [], routeProgress, 14)
 
   const cafePairs = useMemo(
     () => pairCafesToNearestGarages(cafes, garages),
     [cafes, garages],
   )
+
+  const cafeDensePaths = useMemo(
+    () => buildCafeDensePaths(cafePairs),
+    [cafePairs],
+  )
+  const ferryDensePath = useMemo(() => buildFerryDensePath(ferry), [ferry])
+
+  const cafeDenseRef = useRef<CafeDensePath[]>(cafeDensePaths)
+  const ferryDenseRef = useRef<[number, number][]>(ferryDensePath)
+  const cafesVisibleRef = useRef(false)
+
+  useEffect(() => {
+    cafeDenseRef.current = cafeDensePaths
+  }, [cafeDensePaths])
+
+  useEffect(() => {
+    ferryDenseRef.current = ferryDensePath
+  }, [ferryDensePath])
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return
@@ -122,20 +142,45 @@ export default function MapLibreMap() {
     const map = mapRef.current
     if (!map || !ready) return
 
-    syncFerryLayer(map, ferry, animatedFerry)
-  }, [ferry, animatedFerry, ready, activeBaseStyle])
+    setupFerryLayer(map, ferry)
+  }, [ferry, ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
-    void syncCafeToGarageLayer(
-      map,
-      cafePairs,
-      zoom >= parityConfig.zoom.cafesMin,
-      routeProgress,
-    )
-  }, [cafePairs, zoom, routeProgress, ready, activeBaseStyle])
+    const cafesVisible = zoom >= parityConfig.zoom.cafesMin
+    cafesVisibleRef.current = cafesVisible
+    void setupCafeToGarageLayer(map, cafePairs, cafesVisible)
+  }, [cafePairs, zoom, ready, activeBaseStyle])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+
+    const { drawMs, holdMs } = parityConfig.animation
+    const loopMs = drawMs + holdMs
+    const start = performance.now()
+    let frame = 0
+
+    const tick = (now: number) => {
+      const elapsed = (now - start) % loopMs
+      const progress =
+        elapsed < drawMs ? easeInOutCubic(elapsed / drawMs) : 1
+
+      if (ferryDenseRef.current.length) {
+        animateFerryLayer(map, ferryDenseRef.current, progress)
+      }
+      if (cafesVisibleRef.current && cafeDenseRef.current.length) {
+        animateCafeToGarageLayer(map, cafeDenseRef.current, progress)
+      }
+
+      frame = requestAnimationFrame(tick)
+    }
+
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [ready, activeBaseStyle])
 
   useEffect(() => {
     const map = mapRef.current

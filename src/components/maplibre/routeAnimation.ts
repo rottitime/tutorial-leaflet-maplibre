@@ -1,1 +1,6 @@
-export { useRouteAnimationProgress, useAnimatedPath, densifyPath } from '@/components/leaflet/routeAnimation'
+export {
+  densifyPath,
+  easeInOutCubic,
+  useAnimatedPath,
+  useRouteAnimationProgress,
+} from '@/components/leaflet/routeAnimation'
