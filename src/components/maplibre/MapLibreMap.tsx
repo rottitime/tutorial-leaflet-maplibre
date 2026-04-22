@@ -1,22 +1,30 @@
 'use client'
 
 import { parityConfig } from '@/lib/parityConfig'
-import { FerryRoute, PointFeatureCollection, WarningPoint, WeatherPatch } from '@/types'
+import {
+  FerryRoute,
+  PointFeatureCollection,
+  WarningPoint,
+  WeatherPatch,
+} from '@/types'
 import maplibregl, { Map } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { pairCafesToNearestGarages, syncCafeToGarageLayer } from './CafeToGarageLayer'
+import {
+  pairCafesToNearestGarages,
+  syncCafeToGarageLayer,
+} from './CafeToGarageLayer'
 import Debug from './Debug'
 import { syncFerryLayer } from './FerryRouteLayer'
 import { syncGarageLayer } from './GaragePerfLayer'
+import { useFetchJson, useMapZoom } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
-import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
 import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
-import { useFetchJson, useMapZoom } from './mapClientUtils'
+import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
 import { useAnimatedPath, useRouteAnimationProgress } from './routeAnimation'
-import { syncWarningsLayer } from './WarningsLayer'
 import { syncWeatherLayer } from './UkWeatherLayer'
+import { syncWarningsLayer } from './WarningsLayer'
 
 export default function MapLibreMap() {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -26,11 +34,20 @@ export default function MapLibreMap() {
   const [terrainEnabled, setTerrainEnabled] = useState(false)
   const [openBuildingsEnabled, setOpenBuildingsEnabled] = useState(false)
 
-  const garages = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.garages, null)
-  const cafes = useFetchJson<PointFeatureCollection | null>(parityConfig.fetch.cafes, null)
+  const garages = useFetchJson<PointFeatureCollection | null>(
+    parityConfig.fetch.garages,
+    null,
+  )
+  const cafes = useFetchJson<PointFeatureCollection | null>(
+    parityConfig.fetch.cafes,
+    null,
+  )
   const warnings = useFetchJson<WarningPoint[]>(parityConfig.fetch.warnings, [])
   const weather = useFetchJson<WeatherPatch[]>(parityConfig.fetch.weather, [])
-  const ferry = useFetchJson<FerryRoute | null>(parityConfig.fetch.ferries, null)
+  const ferry = useFetchJson<FerryRoute | null>(
+    parityConfig.fetch.ferries,
+    null,
+  )
 
   const zoom = useMapZoom(mapRef.current)
   const routeProgress = useRouteAnimationProgress(
@@ -51,7 +68,7 @@ export default function MapLibreMap() {
       container: containerRef.current,
       style: createBaseStyle(activeBaseStyle),
       center: [-0.09, 51.505],
-      zoom: 5,
+      zoom: 4.03,
     })
 
     map.addControl(new maplibregl.NavigationControl(), 'top-right')
@@ -120,31 +137,34 @@ export default function MapLibreMap() {
     )
   }, [cafePairs, zoom, routeProgress, ready, activeBaseStyle])
 
-
-
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
     syncOpenSourceBuildingsLayer(
       map,
-      openBuildingsEnabled && terrainEnabled && zoom >= parityConfig.zoom.openBuildingsMin,
+      openBuildingsEnabled &&
+        terrainEnabled &&
+        zoom >= parityConfig.zoom.openBuildingsMin,
     )
   }, [openBuildingsEnabled, terrainEnabled, zoom, ready, activeBaseStyle])
 
   return (
-    <div className={styles.container}>
-      <Debug map={mapRef.current} />
-      <MapLibreControls
-        activeBaseStyle={activeBaseStyle}
-        terrainEnabled={terrainEnabled}
-        openBuildingsEnabled={openBuildingsEnabled}
-        onSelectBaseStyle={setActiveBaseStyle}
-        onToggleTerrain={() => setTerrainEnabled((prev) => !prev)}
-        onToggleOpenBuildings={() => setOpenBuildingsEnabled((prev) => !prev)}
-        className={styles.baseToggle}
-        activeButtonClassName={styles.activeToggle}
-      />
-      <div ref={containerRef} className={styles.mapContainer} />
-    </div>
+    <>
+      <div className={styles.container}>
+        <Debug map={mapRef.current} />
+        <MapLibreControls
+          activeBaseStyle={activeBaseStyle}
+          terrainEnabled={terrainEnabled}
+          openBuildingsEnabled={openBuildingsEnabled}
+          onSelectBaseStyle={setActiveBaseStyle}
+          onToggleTerrain={() => setTerrainEnabled((prev) => !prev)}
+          onToggleOpenBuildings={() => setOpenBuildingsEnabled((prev) => !prev)}
+          className={styles.baseToggle}
+          activeButtonClassName={styles.activeToggle}
+        />
+        <div ref={containerRef} className={styles.mapContainer} />
+      </div>
+      <p className={styles.zoomDisplay}>Zoom: {zoom.toFixed(2)}</p>
+    </>
   )
 }
