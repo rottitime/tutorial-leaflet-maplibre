@@ -26,8 +26,8 @@ import { syncGarageLayer } from './GaragePerfLayer'
 import { useFetchJson } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
-import { MapViewDisplay } from './MapViewDisplay'
 import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
+import { MapViewDisplay } from './MapViewDisplay'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
 import { easeInOutCubic } from './routeAnimation'
 import { syncWeatherLayer } from './UkWeatherLayer'
@@ -161,16 +161,12 @@ export default function MapLibreMap() {
 
     const tick = (now: number) => {
       const elapsed = (now - start) % loopMs
-      const progress =
-        elapsed < drawMs ? easeInOutCubic(elapsed / drawMs) : 1
+      const progress = elapsed < drawMs ? easeInOutCubic(elapsed / drawMs) : 1
 
       if (ferryDenseRef.current.length) {
         animateFerryLayer(map, ferryDenseRef.current, progress)
       }
-      if (
-        cafeDenseRef.current.length &&
-        map.getZoom() >= cafesMinZoom
-      ) {
+      if (cafeDenseRef.current.length && map.getZoom() >= cafesMinZoom) {
         animateCafeToGarageLayer(map, cafeDenseRef.current, progress)
       }
 
@@ -184,10 +180,7 @@ export default function MapLibreMap() {
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    syncOpenSourceBuildingsLayer(
-      map,
-      openBuildingsEnabled && terrainEnabled,
-    )
+    syncOpenSourceBuildingsLayer(map, openBuildingsEnabled && terrainEnabled)
   }, [openBuildingsEnabled, terrainEnabled, ready, activeBaseStyle])
 
   return (
