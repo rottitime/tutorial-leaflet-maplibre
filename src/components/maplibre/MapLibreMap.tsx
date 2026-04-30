@@ -1,5 +1,6 @@
 'use client'
 
+import { useMap } from '@/context/MapContext'
 import { parityConfig } from '@/lib/parityConfig'
 import {
   FerryRoute,
@@ -7,7 +8,7 @@ import {
   WarningPoint,
   WeatherPatch,
 } from '@/types'
-import maplibregl, { Map } from 'maplibre-gl'
+import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -35,11 +36,11 @@ import { syncWarningsLayer } from './WarningsLayer'
 
 export default function MapLibreMap() {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const mapRef = useRef<Map | null>(null)
-  const [ready, setReady] = useState(false)
+
   const [activeBaseStyle, setActiveBaseStyle] = useState<BaseStyleId>('osm')
   const [terrainEnabled, setTerrainEnabled] = useState(false)
   const [openBuildingsEnabled, setOpenBuildingsEnabled] = useState(false)
+  const { createMap, mapRef, ready } = useMap()
 
   const garages = useFetchJson<PointFeatureCollection | null>(
     parityConfig.fetch.garages,
@@ -79,28 +80,17 @@ export default function MapLibreMap() {
   }, [ferryDensePath])
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
+    if (!containerRef.current) return
 
-    const map = new maplibregl.Map({
+    createMap({
       container: containerRef.current,
       style: createBaseStyle(activeBaseStyle),
       center: [-0.09, 51.505],
       zoom: 4.03,
     })
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
-
-    map.on('load', () => {
-      mapRef.current = map
-      setReady(true)
-    })
-
-    return () => {
-      map.remove()
-      mapRef.current = null
-      setReady(false)
-    }
-  }, [])
+    mapRef?.current?.addControl(new maplibregl.NavigationControl(), 'top-right')
+  }, [createMap, activeBaseStyle, containerRef, mapRef, ready])
 
   useEffect(() => {
     const map = mapRef.current

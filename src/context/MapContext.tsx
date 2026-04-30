@@ -1,11 +1,49 @@
 'use client'
-import { Map } from 'maplibre-gl'
-import { createContext, useContext } from 'react'
+import maplibregl, { type Map, type MapOptions } from 'maplibre-gl'
+import {
+  createContext,
+  ReactNode,
+  RefObject,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from 'react'
 
-const MapContext = createContext<Map | undefined>(undefined)
+type MapRef = RefObject<Map | null>
 
-export const MapProvider = ({ children }: { children: React.ReactNode }) => {
-  return <MapContext.Provider value={undefined}>{children}</MapContext.Provider>
+type Props = {
+  mapRef: MapRef
+  ready: boolean
+  createMap: (options: MapOptions) => () => void // returns
+}
+
+const MapContext = createContext<Props | undefined>(undefined)
+
+export const MapProvider = ({ children }: { children: ReactNode }) => {
+  const mapRef = useRef<MapRef['current']>(null)
+  const [ready, setReady] = useState(false)
+
+  const cleanup = () => {
+    mapRef.current?.remove()
+    mapRef.current = null
+    setReady(false)
+  }
+
+  const createMap = useCallback((options: MapOptions) => {
+    if (mapRef.current) return () => {}
+    const map = new maplibregl.Map(options)
+    mapRef.current = map
+    map.on('load', () => setReady(true))
+
+    return () => cleanup()
+  }, [])
+
+  return (
+    <MapContext.Provider value={{ mapRef, createMap, ready }}>
+      {children}
+    </MapContext.Provider>
+  )
 }
 
 export const useMap = () => {

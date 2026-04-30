@@ -7,14 +7,18 @@ const HILLSHADE_SOURCE_ID = 'hillshadeSource'
 const HILLSHADE_LAYER_ID = 'hills'
 const MAPTERHORN_TILEJSON_URL = 'https://tiles.mapterhorn.com/tilejson.json'
 
-export function createBaseStyle(styleId: BaseStyleId): maplibregl.StyleSpecification {
+export function createBaseStyle(
+  styleId: BaseStyleId,
+): maplibregl.StyleSpecification {
   if (styleId === 'basicEurope') {
     return {
       version: 8,
       sources: {
         carto: {
           type: 'raster',
-          tiles: ['https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'],
+          tiles: [
+            'https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+          ],
           tileSize: 256,
           attribution: '&copy; OpenStreetMap &copy; CARTO',
         },
@@ -38,6 +42,11 @@ export function createBaseStyle(styleId: BaseStyleId): maplibregl.StyleSpecifica
 }
 
 export function syncTerrain(map: Map, terrainEnabled: boolean) {
+  if (!map.isStyleLoaded()) {
+    map.once('idle', () => syncTerrain(map, terrainEnabled))
+    return
+  }
+
   if (terrainEnabled) {
     if (!map.getSource(TERRAIN_SOURCE_ID)) {
       map.addSource(TERRAIN_SOURCE_ID, {
