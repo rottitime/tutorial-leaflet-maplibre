@@ -29,17 +29,23 @@ import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
 import { createWorldStyle, syncTerrain } from './mapScene'
 import { PolygonBoxes } from './PolygonBoxes'
+import { TwoRoutes } from './TwoRoutes'
 import { MapViewDisplay } from './MapViewDisplay'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
 import { easeInOutCubic } from './routeAnimation'
 import { syncWeatherLayer } from './UkWeatherLayer'
 import { syncWarningsLayer } from './WarningsLayer'
 
+const GARAGES_LAYER_ID = 'garages-layer'
+const WEATHER_LAYER_ID = 'weather-circles'
+
 export default function MapLibreMap() {
   const containerRef = useRef<HTMLDivElement | null>(null)
 
   const [terrainEnabled, setTerrainEnabled] = useState(false)
   const [openBuildingsEnabled, setOpenBuildingsEnabled] = useState(false)
+  const [weatherEnabled, setWeatherEnabled] = useState(true)
+  const [garagesEnabled, setGaragesEnabled] = useState(true)
   const { createMap, mapRef, ready } = useMap()
 
   const garages = useFetchJson<PointFeatureCollection | null>(
@@ -90,7 +96,7 @@ export default function MapLibreMap() {
     })
 
     mapRef?.current?.addControl(new maplibregl.NavigationControl(), 'top-right')
-  }, [createMap, containerRef, mapRef, ready])
+  }, [createMap, mapRef])
 
   useEffect(() => {
     const map = mapRef.current
@@ -103,14 +109,38 @@ export default function MapLibreMap() {
     if (!map || !ready) return
 
     void syncGarageLayer(map, garages)
-  }, [garages, ready])
+  }, [garages, ready, garagesEnabled])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     syncWeatherLayer(map, weather)
-  }, [weather, ready])
+  }, [weather, ready, weatherEnabled])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    if (!map.getLayer(GARAGES_LAYER_ID)) return
+
+    map.setLayoutProperty(
+      GARAGES_LAYER_ID,
+      'visibility',
+      garagesEnabled ? 'visible' : 'none',
+    )
+  }, [garagesEnabled, ready, garages])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    if (!map.getLayer(WEATHER_LAYER_ID)) return
+
+    map.setLayoutProperty(
+      WEATHER_LAYER_ID,
+      'visibility',
+      weatherEnabled ? 'visible' : 'none',
+    )
+  }, [weatherEnabled, ready, weather])
 
   useEffect(() => {
     const map = mapRef.current
@@ -173,8 +203,12 @@ export default function MapLibreMap() {
         <MapLibreControls
           terrainEnabled={terrainEnabled}
           openBuildingsEnabled={openBuildingsEnabled}
+          weatherEnabled={weatherEnabled}
+          garagesEnabled={garagesEnabled}
           onToggleTerrain={() => setTerrainEnabled((prev) => !prev)}
           onToggleOpenBuildings={() => setOpenBuildingsEnabled((prev) => !prev)}
+          onToggleWeather={() => setWeatherEnabled((prev) => !prev)}
+          onToggleGarages={() => setGaragesEnabled((prev) => !prev)}
           className={styles.baseToggle}
           activeButtonClassName={styles.activeToggle}
         />
@@ -185,6 +219,7 @@ export default function MapLibreMap() {
         className={styles.zoomDisplay}
       />
       <PolygonBoxes />
+      <TwoRoutes />
     </>
   )
 }

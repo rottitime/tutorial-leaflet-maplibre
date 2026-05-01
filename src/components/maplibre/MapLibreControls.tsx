@@ -3,8 +3,12 @@
 type Props = {
   terrainEnabled: boolean
   openBuildingsEnabled: boolean
+  weatherEnabled: boolean
+  garagesEnabled: boolean
   onToggleTerrain: () => void
   onToggleOpenBuildings: () => void
+  onToggleWeather: () => void
+  onToggleGarages: () => void
   className: string
   activeButtonClassName: string
 }
@@ -12,8 +16,12 @@ type Props = {
 export function MapLibreControls({
   terrainEnabled,
   openBuildingsEnabled,
+  weatherEnabled,
+  garagesEnabled,
   onToggleTerrain,
   onToggleOpenBuildings,
+  onToggleWeather,
+  onToggleGarages,
   className,
   activeButtonClassName,
 }: Props) {
@@ -32,6 +40,20 @@ export function MapLibreControls({
         type="button"
       >
         Open 3D Buildings
+      </button>
+      <button
+        className={weatherEnabled ? activeButtonClassName : ''}
+        onClick={onToggleWeather}
+        type="button"
+      >
+        Weather
+      </button>
+      <button
+        className={garagesEnabled ? activeButtonClassName : ''}
+        onClick={onToggleGarages}
+        type="button"
+      >
+        Garages
       </button>
     </div>
   )
