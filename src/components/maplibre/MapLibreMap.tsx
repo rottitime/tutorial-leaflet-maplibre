@@ -28,6 +28,7 @@ import { useFetchJson } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
 import { createWorldStyle, syncTerrain } from './mapScene'
+import { PolygonBoxes } from './PolygonBoxes'
 import { MapViewDisplay } from './MapViewDisplay'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
 import { easeInOutCubic } from './routeAnimation'
@@ -183,6 +184,7 @@ export default function MapLibreMap() {
         map={ready ? mapRef.current : null}
         className={styles.zoomDisplay}
       />
+      <PolygonBoxes />
     </>
   )
 }
