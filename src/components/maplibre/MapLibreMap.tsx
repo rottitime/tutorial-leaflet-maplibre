@@ -215,7 +215,7 @@ export default function MapLibreMap() {
         map={ready ? mapRef.current : null}
         className={styles.zoomDisplay}
       />
-      <PolygonBoxes />
+      {false && <PolygonBoxes />}
       <TwoRoutes />
     </>
   )
