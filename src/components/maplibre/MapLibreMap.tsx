@@ -27,7 +27,7 @@ import { syncGarageLayer } from './GaragePerfLayer'
 import { useFetchJson } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
-import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
+import { createWorldStyle, syncTerrain } from './mapScene'
 import { MapViewDisplay } from './MapViewDisplay'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
 import { easeInOutCubic } from './routeAnimation'
@@ -37,7 +37,6 @@ import { syncWarningsLayer } from './WarningsLayer'
 export default function MapLibreMap() {
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  const [activeBaseStyle, setActiveBaseStyle] = useState<BaseStyleId>('osm')
   const [terrainEnabled, setTerrainEnabled] = useState(false)
   const [openBuildingsEnabled, setOpenBuildingsEnabled] = useState(false)
   const { createMap, mapRef, ready } = useMap()
@@ -84,60 +83,54 @@ export default function MapLibreMap() {
 
     createMap({
       container: containerRef.current,
-      style: createBaseStyle(activeBaseStyle),
+      style: createWorldStyle(),
       center: [-0.09, 51.505],
       zoom: 4.03,
     })
 
     mapRef?.current?.addControl(new maplibregl.NavigationControl(), 'top-right')
-  }, [createMap, activeBaseStyle, containerRef, mapRef, ready])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !ready) return
-    map.setStyle(createBaseStyle(activeBaseStyle))
-  }, [activeBaseStyle, ready])
+  }, [createMap, containerRef, mapRef, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
     syncTerrain(map, terrainEnabled)
-  }, [terrainEnabled, ready, activeBaseStyle])
+  }, [terrainEnabled, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     void syncGarageLayer(map, garages)
-  }, [garages, ready, activeBaseStyle])
+  }, [garages, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     syncWeatherLayer(map, weather)
-  }, [weather, ready, activeBaseStyle])
+  }, [weather, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     void syncWarningsLayer(map, warnings)
-  }, [warnings, ready, activeBaseStyle])
+  }, [warnings, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     setupFerryLayer(map, ferry)
-  }, [ferry, ready, activeBaseStyle])
+  }, [ferry, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     void setupCafeToGarageLayer(map, cafePairs)
-  }, [cafePairs, ready, activeBaseStyle])
+  }, [cafePairs, ready])
 
   useEffect(() => {
     const map = mapRef.current
@@ -165,22 +158,20 @@ export default function MapLibreMap() {
 
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [ready, activeBaseStyle])
+  }, [ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
     syncOpenSourceBuildingsLayer(map, openBuildingsEnabled && terrainEnabled)
-  }, [openBuildingsEnabled, terrainEnabled, ready, activeBaseStyle])
+  }, [openBuildingsEnabled, terrainEnabled, ready])
 
   return (
     <>
       <div className={styles.container}>
         <MapLibreControls
-          activeBaseStyle={activeBaseStyle}
           terrainEnabled={terrainEnabled}
           openBuildingsEnabled={openBuildingsEnabled}
-          onSelectBaseStyle={setActiveBaseStyle}
           onToggleTerrain={() => setTerrainEnabled((prev) => !prev)}
           onToggleOpenBuildings={() => setOpenBuildingsEnabled((prev) => !prev)}
           className={styles.baseToggle}
