@@ -1,7 +1,7 @@
 'use client'
 
 import { useMap } from '@/context/MapContext'
-import type { FeatureCollection, LineString } from 'geojson'
+import type { FeatureCollection, LineString, Point } from 'geojson'
 import { useEffect } from 'react'
 import {
   addLayerIfMissing,
@@ -11,6 +11,8 @@ import {
 
 const SOURCE_ID = 'two-routes'
 const LAYER_ID = 'two-routes-line'
+const POINT_SOURCE_ID = 'two-routes-points'
+const POINT_LAYER_ID = 'two-routes-points-circle'
 
 const ROUTES: FeatureCollection<LineString, { color: string; dashed?: boolean }> = {
   type: 'FeatureCollection',
@@ -42,6 +44,17 @@ const ROUTES: FeatureCollection<LineString, { color: string; dashed?: boolean }>
   ],
 }
 
+const ROUTE_POINTS: FeatureCollection<Point, { dashed?: boolean }> = {
+  type: 'FeatureCollection',
+  features: ROUTES.features.flatMap((feature) =>
+    feature.geometry.coordinates.map((coord) => ({
+      type: 'Feature' as const,
+      properties: { dashed: feature.properties.dashed },
+      geometry: { type: 'Point' as const, coordinates: coord },
+    })),
+  ),
+}
+
 export function TwoRoutes() {
   const { mapRef, ready } = useMap()
 
@@ -51,6 +64,11 @@ export function TwoRoutes() {
 
     return runWhenStyleReady(map, () => {
       addSourceIfMissing(map, SOURCE_ID, { type: 'geojson', data: ROUTES })
+      addSourceIfMissing(map, POINT_SOURCE_ID, {
+        type: 'geojson',
+        data: ROUTE_POINTS,
+      })
+
       addLayerIfMissing(map, {
         id: LAYER_ID,
         type: 'line',
@@ -63,6 +81,28 @@ export function TwoRoutes() {
             ['boolean', ['get', 'dashed'], false],
             ['literal', [1, 1.6]],
             ['literal', [1, 0]],
+          ],
+        },
+      })
+
+      addLayerIfMissing(map, {
+        id: POINT_LAYER_ID,
+        type: 'circle',
+        source: POINT_SOURCE_ID,
+        paint: {
+          'circle-radius': 6,
+          'circle-color': [
+            'case',
+            ['boolean', ['get', 'dashed'], false],
+            '#ffffff',
+            '#2563eb',
+          ],
+          'circle-stroke-color': '#2563eb',
+          'circle-stroke-width': [
+            'case',
+            ['boolean', ['get', 'dashed'], false],
+            3,
+            0,
           ],
         },
       })
