@@ -28,11 +28,11 @@ import { useFetchJson } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
 import { createWorldStyle, syncTerrain } from './mapScene'
-import { PolygonBoxes } from './PolygonBoxes'
-import { TwoRoutes } from './TwoRoutes'
 import { MapViewDisplay } from './MapViewDisplay'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
+import { PolygonBoxes } from './PolygonBoxes'
 import { easeInOutCubic } from './routeAnimation'
+import { TwoRoutes } from './TwoRoutes'
 import { syncWeatherLayer } from './UkWeatherLayer'
 import { syncWarningsLayer } from './WarningsLayer'
 
@@ -44,8 +44,8 @@ export default function MapLibreMap() {
 
   const [terrainEnabled, setTerrainEnabled] = useState(false)
   const [openBuildingsEnabled, setOpenBuildingsEnabled] = useState(false)
-  const [weatherEnabled, setWeatherEnabled] = useState(true)
-  const [garagesEnabled, setGaragesEnabled] = useState(true)
+  const [weatherEnabled, setWeatherEnabled] = useState(false)
+  const [garagesEnabled, setGaragesEnabled] = useState(false)
   const { createMap, mapRef, ready } = useMap()
 
   const garages = useFetchJson<PointFeatureCollection | null>(
@@ -108,7 +108,16 @@ export default function MapLibreMap() {
     const map = mapRef.current
     if (!map || !ready) return
 
-    void syncGarageLayer(map, garages)
+    void (async () => {
+      await syncGarageLayer(map, garages)
+      if (!map.getLayer(GARAGES_LAYER_ID)) return
+
+      map.setLayoutProperty(
+        GARAGES_LAYER_ID,
+        'visibility',
+        garagesEnabled ? 'visible' : 'none',
+      )
+    })()
   }, [garages, ready, garagesEnabled])
 
   useEffect(() => {
@@ -117,18 +126,6 @@ export default function MapLibreMap() {
 
     syncWeatherLayer(map, weather)
   }, [weather, ready, weatherEnabled])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !ready) return
-    if (!map.getLayer(GARAGES_LAYER_ID)) return
-
-    map.setLayoutProperty(
-      GARAGES_LAYER_ID,
-      'visibility',
-      garagesEnabled ? 'visible' : 'none',
-    )
-  }, [garagesEnabled, ready, garages])
 
   useEffect(() => {
     const map = mapRef.current
