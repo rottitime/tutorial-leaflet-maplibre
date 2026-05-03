@@ -10,6 +10,8 @@ export const parityConfig = {
     warnings: '/api/test/warnings',
     weather: '/api/test/weather',
     ferries: '/api/test/ferries',
+    twoRoutes: '/api/test/two-routes',
+    polygonBoxes: '/api/test/polygon-boxes',
   },
   animation: {
     drawMs: 2800,

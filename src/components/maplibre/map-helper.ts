@@ -27,6 +27,12 @@ export function addSourceIfMissing(
 export function addLayerIfMissing(
   map: Map,
   layer: Parameters<Map['addLayer']>[0],
+  beforeId?: string,
 ) {
-  if (!map.getLayer(layer.id)) map.addLayer(layer)
+  if (map.getLayer(layer.id)) return
+  if (beforeId && map.getLayer(beforeId)) {
+    map.addLayer(layer, beforeId)
+    return
+  }
+  map.addLayer(layer)
 }
