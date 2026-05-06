@@ -6,14 +6,8 @@ export function runWhenStyleReady(map: Map, fn: () => void) {
     return () => {}
   }
 
-  const onStyleData = () => {
-    if (!map.isStyleLoaded()) return
-    map.off('styledata', onStyleData)
-    fn()
-  }
-
-  map.on('styledata', onStyleData)
-  return () => map.off('styledata', onStyleData)
+  map.once('load', fn)
+  return () => map.off('load', fn)
 }
 
 export function addSourceIfMissing(

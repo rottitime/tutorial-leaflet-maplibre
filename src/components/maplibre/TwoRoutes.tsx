@@ -71,6 +71,7 @@ export function TwoRoutes() {
     }
 
     const cleanupReady = runWhenStyleReady(map, () => {
+      console.log('routes', { routes })
       addSourceIfMissing(map, SOURCE_ID, { type: 'geojson', data: routes })
       addSourceIfMissing(map, POINT_SOURCE_ID, {
         type: 'geojson',
