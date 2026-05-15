@@ -1,43 +1,44 @@
 import maplibregl, { Map } from 'maplibre-gl'
 
-export type BaseStyleId = 'osm' | 'basicEurope'
-
 const TERRAIN_SOURCE_ID = 'terrainSource'
 const HILLSHADE_SOURCE_ID = 'hillshadeSource'
 const HILLSHADE_LAYER_ID = 'hills'
 const MAPTERHORN_TILEJSON_URL = 'https://tiles.mapterhorn.com/tilejson.json'
 
-export function createBaseStyle(styleId: BaseStyleId): maplibregl.StyleSpecification {
-  if (styleId === 'basicEurope') {
-    return {
-      version: 8,
-      sources: {
-        carto: {
-          type: 'raster',
-          tiles: ['https://cartodb-basemaps-a.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png'],
-          tileSize: 256,
-          attribution: '&copy; OpenStreetMap &copy; CARTO',
-        },
-      },
-      layers: [{ id: 'carto', type: 'raster', source: 'carto' }],
-    }
-  }
-
+export function createWorldStyle(): maplibregl.StyleSpecification {
   return {
     version: 8,
     sources: {
-      osm: {
-        type: 'raster',
-        tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
-        tileSize: 256,
-        attribution: '&copy; OpenStreetMap contributors',
+      world: {
+        type: 'geojson',
+        data: '/data/world.json',
       },
     },
-    layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+    layers: [
+      {
+        id: 'sea',
+        type: 'background',
+        paint: { 'background-color': '#dbeafe' },
+      },
+      {
+        id: 'land',
+        type: 'fill',
+        source: 'world',
+        paint: {
+          'fill-color': '#f8fafc',
+          'fill-outline-color': '#94a3b8',
+        },
+      },
+    ],
   }
 }
 
 export function syncTerrain(map: Map, terrainEnabled: boolean) {
+  if (!map.isStyleLoaded()) {
+    map.once('idle', () => syncTerrain(map, terrainEnabled))
+    return
+  }
+
   if (terrainEnabled) {
     if (!map.getSource(TERRAIN_SOURCE_ID)) {
       map.addSource(TERRAIN_SOURCE_ID, {

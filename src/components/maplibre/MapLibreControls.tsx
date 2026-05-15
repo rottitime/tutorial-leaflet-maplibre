@@ -1,44 +1,32 @@
 'use client'
 
-type BaseStyleId = 'osm' | 'basicEurope'
-
 type Props = {
-  activeBaseStyle: BaseStyleId
   terrainEnabled: boolean
   openBuildingsEnabled: boolean
-  onSelectBaseStyle: (style: BaseStyleId) => void
+  weatherEnabled: boolean
+  garagesEnabled: boolean
   onToggleTerrain: () => void
   onToggleOpenBuildings: () => void
+  onToggleWeather: () => void
+  onToggleGarages: () => void
   className: string
   activeButtonClassName: string
 }
 
 export function MapLibreControls({
-  activeBaseStyle,
   terrainEnabled,
   openBuildingsEnabled,
-  onSelectBaseStyle,
+  weatherEnabled,
+  garagesEnabled,
   onToggleTerrain,
   onToggleOpenBuildings,
+  onToggleWeather,
+  onToggleGarages,
   className,
   activeButtonClassName,
 }: Props) {
   return (
     <div className={className}>
-      <button
-        className={activeBaseStyle === 'osm' ? activeButtonClassName : ''}
-        onClick={() => onSelectBaseStyle('osm')}
-        type="button"
-      >
-        OpenStreetMap
-      </button>
-      <button
-        className={activeBaseStyle === 'basicEurope' ? activeButtonClassName : ''}
-        onClick={() => onSelectBaseStyle('basicEurope')}
-        type="button"
-      >
-        Basic Europe
-      </button>
       <button
         className={terrainEnabled ? activeButtonClassName : ''}
         onClick={onToggleTerrain}
@@ -52,6 +40,20 @@ export function MapLibreControls({
         type="button"
       >
         Open 3D Buildings
+      </button>
+      <button
+        className={weatherEnabled ? activeButtonClassName : ''}
+        onClick={onToggleWeather}
+        type="button"
+      >
+        Weather
+      </button>
+      <button
+        className={garagesEnabled ? activeButtonClassName : ''}
+        onClick={onToggleGarages}
+        type="button"
+      >
+        Garages
       </button>
     </div>
   )

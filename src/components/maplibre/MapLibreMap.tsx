@@ -1,5 +1,6 @@
 'use client'
 
+import { useMap } from '@/context/MapContext'
 import { parityConfig } from '@/lib/parityConfig'
 import {
   FerryRoute,
@@ -7,7 +8,7 @@ import {
   WarningPoint,
   WeatherPatch,
 } from '@/types'
-import maplibregl, { Map } from 'maplibre-gl'
+import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -26,20 +27,27 @@ import { syncGarageLayer } from './GaragePerfLayer'
 import { useFetchJson } from './mapClientUtils'
 import { MapLibreControls } from './MapLibreControls'
 import styles from './MapLibreMap.module.css'
+import { createWorldStyle, syncTerrain } from './mapScene'
 import { MapViewDisplay } from './MapViewDisplay'
-import { BaseStyleId, createBaseStyle, syncTerrain } from './mapScene'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
+import { BathymetryLayer } from './BathymetryLayer'
+import { PolygonBoxes } from './PolygonBoxes'
 import { easeInOutCubic } from './routeAnimation'
+import { TwoRoutes } from './TwoRoutes'
 import { syncWeatherLayer } from './UkWeatherLayer'
 import { syncWarningsLayer } from './WarningsLayer'
 
+const GARAGES_LAYER_ID = 'garages-layer'
+const WEATHER_LAYER_ID = 'weather-circles'
+
 export default function MapLibreMap() {
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const mapRef = useRef<Map | null>(null)
-  const [ready, setReady] = useState(false)
-  const [activeBaseStyle, setActiveBaseStyle] = useState<BaseStyleId>('osm')
+
   const [terrainEnabled, setTerrainEnabled] = useState(false)
   const [openBuildingsEnabled, setOpenBuildingsEnabled] = useState(false)
+  const [weatherEnabled, setWeatherEnabled] = useState(false)
+  const [garagesEnabled, setGaragesEnabled] = useState(false)
+  const { createMap, mapRef, ready } = useMap()
 
   const garages = useFetchJson<PointFeatureCollection | null>(
     parityConfig.fetch.garages,
@@ -79,75 +87,79 @@ export default function MapLibreMap() {
   }, [ferryDensePath])
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
+    if (!containerRef.current) return
 
-    const map = new maplibregl.Map({
+    createMap({
       container: containerRef.current,
-      style: createBaseStyle(activeBaseStyle),
+      style: createWorldStyle(),
       center: [-0.09, 51.505],
       zoom: 4.03,
     })
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
-
-    map.on('load', () => {
-      mapRef.current = map
-      setReady(true)
-    })
-
-    return () => {
-      map.remove()
-      mapRef.current = null
-      setReady(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !ready) return
-    map.setStyle(createBaseStyle(activeBaseStyle))
-  }, [activeBaseStyle, ready])
+    mapRef?.current?.addControl(new maplibregl.NavigationControl(), 'top-right')
+  }, [createMap, mapRef])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
     syncTerrain(map, terrainEnabled)
-  }, [terrainEnabled, ready, activeBaseStyle])
+  }, [terrainEnabled, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
-    void syncGarageLayer(map, garages)
-  }, [garages, ready, activeBaseStyle])
+    void (async () => {
+      await syncGarageLayer(map, garages)
+      if (!map.getLayer(GARAGES_LAYER_ID)) return
+
+      map.setLayoutProperty(
+        GARAGES_LAYER_ID,
+        'visibility',
+        garagesEnabled ? 'visible' : 'none',
+      )
+    })()
+  }, [garages, ready, garagesEnabled])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     syncWeatherLayer(map, weather)
-  }, [weather, ready, activeBaseStyle])
+  }, [weather, ready, weatherEnabled])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !ready) return
+    if (!map.getLayer(WEATHER_LAYER_ID)) return
+
+    map.setLayoutProperty(
+      WEATHER_LAYER_ID,
+      'visibility',
+      weatherEnabled ? 'visible' : 'none',
+    )
+  }, [weatherEnabled, ready, weather])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     void syncWarningsLayer(map, warnings)
-  }, [warnings, ready, activeBaseStyle])
+  }, [warnings, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     setupFerryLayer(map, ferry)
-  }, [ferry, ready, activeBaseStyle])
+  }, [ferry, ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
 
     void setupCafeToGarageLayer(map, cafePairs)
-  }, [cafePairs, ready, activeBaseStyle])
+  }, [cafePairs, ready])
 
   useEffect(() => {
     const map = mapRef.current
@@ -161,16 +173,12 @@ export default function MapLibreMap() {
 
     const tick = (now: number) => {
       const elapsed = (now - start) % loopMs
-      const progress =
-        elapsed < drawMs ? easeInOutCubic(elapsed / drawMs) : 1
+      const progress = elapsed < drawMs ? easeInOutCubic(elapsed / drawMs) : 1
 
       if (ferryDenseRef.current.length) {
         animateFerryLayer(map, ferryDenseRef.current, progress)
       }
-      if (
-        cafeDenseRef.current.length &&
-        map.getZoom() >= cafesMinZoom
-      ) {
+      if (cafeDenseRef.current.length && map.getZoom() >= cafesMinZoom) {
         animateCafeToGarageLayer(map, cafeDenseRef.current, progress)
       }
 
@@ -179,27 +187,26 @@ export default function MapLibreMap() {
 
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [ready, activeBaseStyle])
+  }, [ready])
 
   useEffect(() => {
     const map = mapRef.current
     if (!map || !ready) return
-    syncOpenSourceBuildingsLayer(
-      map,
-      openBuildingsEnabled && terrainEnabled,
-    )
-  }, [openBuildingsEnabled, terrainEnabled, ready, activeBaseStyle])
+    syncOpenSourceBuildingsLayer(map, openBuildingsEnabled && terrainEnabled)
+  }, [openBuildingsEnabled, terrainEnabled, ready])
 
   return (
     <>
       <div className={styles.container}>
         <MapLibreControls
-          activeBaseStyle={activeBaseStyle}
           terrainEnabled={terrainEnabled}
           openBuildingsEnabled={openBuildingsEnabled}
-          onSelectBaseStyle={setActiveBaseStyle}
+          weatherEnabled={weatherEnabled}
+          garagesEnabled={garagesEnabled}
           onToggleTerrain={() => setTerrainEnabled((prev) => !prev)}
           onToggleOpenBuildings={() => setOpenBuildingsEnabled((prev) => !prev)}
+          onToggleWeather={() => setWeatherEnabled((prev) => !prev)}
+          onToggleGarages={() => setGaragesEnabled((prev) => !prev)}
           className={styles.baseToggle}
           activeButtonClassName={styles.activeToggle}
         />
@@ -209,6 +216,9 @@ export default function MapLibreMap() {
         map={ready ? mapRef.current : null}
         className={styles.zoomDisplay}
       />
+      <TwoRoutes />
+      <BathymetryLayer />
+      {true && <PolygonBoxes />}
     </>
   )
 }
