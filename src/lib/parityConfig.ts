@@ -12,6 +12,8 @@ export const parityConfig = {
     ferries: '/api/test/ferries',
     twoRoutes: '/api/test/two-routes',
     polygonBoxes: '/api/test/polygon-boxes',
+    bathymetry200m: '/data/bathymetry-200m.geojson',
+    bathymetry1000m: '/data/bathymetry-1000m.geojson',
   },
   animation: {
     drawMs: 2800,

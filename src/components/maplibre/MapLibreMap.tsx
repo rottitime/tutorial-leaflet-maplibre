@@ -30,6 +30,7 @@ import styles from './MapLibreMap.module.css'
 import { createWorldStyle, syncTerrain } from './mapScene'
 import { MapViewDisplay } from './MapViewDisplay'
 import { syncOpenSourceBuildingsLayer } from './OpenSourceBuildingsLayer'
+import { BathymetryLayer } from './BathymetryLayer'
 import { PolygonBoxes } from './PolygonBoxes'
 import { easeInOutCubic } from './routeAnimation'
 import { TwoRoutes } from './TwoRoutes'
@@ -216,6 +217,7 @@ export default function MapLibreMap() {
         className={styles.zoomDisplay}
       />
       <TwoRoutes />
+      <BathymetryLayer />
       {true && <PolygonBoxes />}
     </>
   )
